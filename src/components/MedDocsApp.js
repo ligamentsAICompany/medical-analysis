@@ -2,11 +2,12 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Activity, Download, Sparkles, Loader } from 'lucide-react';
+import { Download } from 'lucide-react';
 import UploadZone from './UploadZone';
 import DocumentTable from './DocumentTable';
 import PdfViewer from './PdfViewer';
 import Toast from './Toast';
+import { AppHeader } from './AppHeader';
 import { useMedDocs } from '../context/MedDocsContext';
 
 const SAMPLE_IMAGES = [
@@ -39,7 +40,6 @@ export default function MedDocsApp() {
     toasts, addToast, removeToast,
     documents, addDocument, deleteDocument,
     analyzeFile,
-    modelsReady, modelsPreloading,
   } = useMedDocs();
 
   const [viewerDoc, setViewerDoc] = useState(null);
@@ -72,34 +72,9 @@ export default function MedDocsApp() {
     router.push(`/analysis/${doc.id}`);
   }, [router]);
 
-  const readyCount = documents.filter(d => d.status === 'ready').length;
-
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-logo">
-          <Activity size={20} />
-        </div>
-        <div className="header-title">
-          <h1>MedDocs</h1>
-          <p>Medical Document Manager</p>
-        </div>
-        <div className="header-spacer" />
-
-        {modelsPreloading ? (
-          <span className="ai-status-pill ai-status-pill--loading">
-            <Loader size={12} className="spin" />
-            AI loading…
-          </span>
-        ) : modelsReady ? (
-          <span className="ai-status-pill ai-status-pill--ready">
-            <Sparkles size={12} />
-            AI ready
-          </span>
-        ) : null}
-
-        <span className="header-badge">{readyCount} document{readyCount !== 1 ? 's' : ''} ready</span>
-      </header>
+      <AppHeader />
 
       <main className="app-main">
         <UploadZone onFiles={handleFiles} addToast={addToast} />

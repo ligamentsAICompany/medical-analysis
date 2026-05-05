@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useMedDocs } from '../../../src/context/MedDocsContext';
 import AnalysisPageView from '../../../src/components/AnalysisPageView';
 import Toast from '../../../src/components/Toast';
+import { AppHeader } from '../../../src/components/AppHeader';
 
 export default function AnalysisDocPage() {
   const params = useParams();
@@ -46,8 +47,11 @@ export default function AnalysisDocPage() {
 
   if (!doc) {
     return (
-      <div className="analysis-page analysis-page--empty">
-        <p className="text-muted">Loading…</p>
+      <div className="app">
+        <AppHeader />
+        <div className="analysis-page analysis-page--empty">
+          <p className="text-muted">Loading…</p>
+        </div>
         <Toast toasts={toasts} onRemove={removeToast} />
       </div>
     );
