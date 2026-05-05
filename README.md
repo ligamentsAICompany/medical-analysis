@@ -1,70 +1,139 @@
-# Getting Started with Create React App
+# MedDocs — Medical Document Manager
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A browser-based medical document upload and AI analysis tool built with **Next.js 16** and **Transformers.js**. All AI processing runs entirely in the browser — no backend, no API keys, no data leaves the device.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+### Document Management
+- Drag-and-drop or click-to-browse upload (PDF, TXT, JPG, PNG — max 20 MB)
+- Document table with sortable columns: file name, type, patient, size, upload date, status
+- Search by file name or patient name; filter by document type
+- Delete documents; view raw PDF in-browser
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### AI-Powered Analysis (Transformers.js)
+- Models pre-load in the background the moment the app opens
+- On file upload: heuristic analysis runs instantly, then AI enhancement runs automatically
+- No manual "Run AI" button required — analysis appears in the panel as soon as ready
+- Models are cached in the browser after the first download (~150 MB total, one-time)
+- Models used:
+  - `Xenova/bert-base-NER` — named entity recognition (people, orgs, locations)
+  - `Xenova/nli-deberta-v3-small` — zero-shot document classification
+  - `Xenova/distilbart-cnn-6-6` — summarisation
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Document Analysis Panel
+Opens automatically on upload; also accessible via "View Analysis" in the table.
 
-### `npm test`
+| Document Type | Analysis Shown |
+|---|---|
+| **Lab Report** | Lab values table with HIGH/LOW flags, abnormal count alert |
+| **Imaging Report** | Findings, Impression, Recommendations blocks |
+| **Prescription** | Medication list with dosage, NER-detected drugs |
+| **Discharge Summary** | Vital signs cards, patient timeline |
+| **All types** | AI summary, classification + confidence bar, extracted entities, patient details |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Download PDF** button in the panel footer for uploaded files
+- **Retry AI** button if AI enhancement failed or hasn't run
 
-### `npm run build`
+### Mock Data
+Five pre-loaded demo documents covering all document types:
+- `lab_results_march_2026.pdf` — CBC + metabolic panel with lab values table
+- `discharge_summary_jones.pdf` — Cardiac admission discharge summary
+- `prescription_amoxicillin.pdf` — Antibiotic prescription with medications list
+- `mri_report_brain.pdf` — Radiology report with FINDINGS / IMPRESSION / RECOMMENDATIONS
+- `referral_cardiology_kowalski.pdf` — GP referral letter
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Sample PDFs for testing
+Three realistic medical PDFs included in `public/samples/`:
+- `blood_report_cbc_metabolic.pdf`
+- `chest_xray_radiology_report.pdf`
+- `clinical_assessment_hypertension.pdf`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Tech Stack
 
-### `npm run eject`
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, webpack mode) |
+| UI | React 19, lucide-react icons |
+| PDF extraction | pdfjs-dist v5 (browser-only, dynamic import) |
+| AI / NLP | @xenova/transformers v2 (100% in-browser WASM) |
+| Styling | Plain CSS (globals.css, CSS custom properties) |
+| Sample generation | pdfkit (dev dependency, `scripts/generate-samples.js`) |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project Structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+app/
+  layout.js          # Root Next.js layout + metadata
+  page.js            # Entry: lazy-loads MedDocsApp with 'use client'
+  globals.css        # All styles (variables, layout, components)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+src/
+  components/
+    MedDocsApp.js    # Root app component — state wiring, auto-open panel on upload
+    UploadZone.js    # Drag-and-drop upload area
+    DocumentTable.js # Sortable, filterable document list
+    AnalysisPageView.js # Full-page AI analysis (`/analysis/[docId]`)
+    analysis/AnalysisShared.js # Shared analysis sections (lab, imaging, entities)
+    PdfViewer.js     # In-browser PDF viewer modal
+    StatusBadge.js   # Uploading / Analysing / Ready / Error pill
+    Toast.js         # Toast notification stack
 
-## Learn More
+  hooks/
+    useDocuments.js  # Document state (add, update, delete, object URLs)
+    useAnalysis.js   # Heuristic + AI analysis; model pre-load on mount
+    useToast.js      # Toast queue management
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+  lib/
+    heuristics.js    # Fast regex-based: classify, NER, metrics, summary
+    labParser.js     # Parses lab value rows → { test, value, unit, refRange, flag }
+    pdfExtract.js    # PDF text extraction via pdfjs-dist (dynamic import)
+    ai.js            # Transformers.js pipeline loader + enhanceAnalysis()
+    mockData.js      # Five pre-built demo documents
+    pdfjs-stub.js    # Empty module aliased to pdfjs-dist in server webpack build
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+scripts/
+  generate-samples.js  # Node script (pdfkit) to regenerate sample PDFs
+```
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Getting Started
 
-### Analyzing the Bundle Size
+```bash
+npm install          # Also copies pdfjs worker to public/ via postinstall
+npm run dev          # Starts Next.js dev server at http://localhost:3000
+npm run build        # Production build
+npm run start        # Serve production build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+To regenerate the sample PDFs:
+```bash
+node scripts/generate-samples.js
+```
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Architecture Notes
 
-### Advanced Configuration
+### SSR / Browser-only libraries
+`pdfjs-dist` and `@xenova/transformers` use browser APIs (`DOMMatrix`, WebAssembly, etc.) and cannot run in Node.js.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+**Fix applied:** `next.config.js` aliases `pdfjs-dist` → `src/lib/pdfjs-stub.js` (empty module) in the server webpack build. Client build gets the real library. `@xenova/transformers` is kept in `serverExternalPackages`.
 
-### Deployment
+### AI model pre-loading
+`useAnalysis` calls `loadModels()` inside a `useEffect` on mount. A singleton `loadingPromise` in `ai.js` ensures concurrent callers share one download. Documents uploaded before models finish are queued in `pendingRef` and enhanced automatically once models are ready.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Analysis flow
+1. File dropped → `addDocument()` creates record + `objectUrl`
+2. Analysis panel opens immediately (shows skeleton)
+3. `analyzeFile()` extracts text (PDF → pdfjs, text → FileReader, image → filename)
+4. Heuristic analysis runs synchronously: classify → NER → metrics → lab values → summary
+5. Document status → `ready`; panel populates with heuristic results
+6. `runAiEnhance()` called automatically → Transformers.js models refine classification, entities, summary
+7. Panel updates with `aiEnhanced: true` badge

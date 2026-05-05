@@ -1,0 +1,69 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useMedDocs } from '../../../src/context/MedDocsContext';
+import AnalysisPageView from '../../../src/components/AnalysisPageView';
+import Toast from '../../../src/components/Toast';
+
+export default function AnalysisDocPage() {
+  const params = useParams();
+  const router = useRouter();
+  const docId = params.docId;
+
+  const {
+    documents,
+    deleteDocument,
+    addToast,
+    removeToast,
+    toasts,
+    enhanceWithAI,
+    aiLoading,
+    aiLoadingId,
+    aiLoadProgress,
+  } = useMedDocs();
+
+  const doc = useMemo(() => documents.find(d => d.id === docId), [documents, docId]);
+
+  useEffect(() => {
+    if (!docId) return;
+    if (documents.length > 0 && !doc) {
+      addToast('Document not found', 'error', 3000);
+      router.replace('/');
+    }
+  }, [docId, doc, documents.length, router, addToast]);
+
+  const handleViewPdf = useCallback(() => {
+    if (!doc) return;
+    router.push(`/?view=${encodeURIComponent(doc.id)}`);
+  }, [doc, router]);
+
+  const handleDelete = useCallback((id) => {
+    deleteDocument(id);
+    addToast('Document deleted', 'info', 2500);
+    router.replace('/');
+  }, [deleteDocument, addToast, router]);
+
+  if (!doc) {
+    return (
+      <div className="analysis-page analysis-page--empty">
+        <p className="text-muted">Loading…</p>
+        <Toast toasts={toasts} onRemove={removeToast} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <AnalysisPageView
+        doc={doc}
+        onViewPdf={handleViewPdf}
+        onDelete={handleDelete}
+        onEnhanceAI={enhanceWithAI}
+        aiLoading={aiLoading && aiLoadingId === doc.id}
+        aiLoadProgress={aiLoadingId === doc.id ? aiLoadProgress : null}
+      />
+      <Toast toasts={toasts} onRemove={removeToast} />
+    </>
+  );
+}
