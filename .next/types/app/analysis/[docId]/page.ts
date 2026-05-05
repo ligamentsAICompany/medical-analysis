@@ -1,4 +1,4 @@
-// File: /Users/appu/Documents/file-upload/app/analysis/[docId]/page.js
+// File: /Users/appu/Documents/medical-analysis/app/analysis/[docId]/page.js
 import * as entry from '../../../../../app/analysis/[docId]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

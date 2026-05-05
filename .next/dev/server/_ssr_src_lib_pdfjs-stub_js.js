@@ -17,7 +17,7 @@ exports.modules = {
   \*******************************/
 /***/ ((module) => {
 
-eval("\n// Empty stub used server-side to prevent pdfjs-dist from being evaluated in Node.js\nmodule.exports = {};\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvbGliL3BkZmpzLXN0dWIuanMiLCJtYXBwaW5ncyI6IjtBQUFBLG9GQUFvRjtBQUNwRkEsT0FBT0MsT0FBTyxHQUFHLENBQUMiLCJzb3VyY2VzIjpbIi9Vc2Vycy9hcHB1L0RvY3VtZW50cy9maWxlLXVwbG9hZC9zcmMvbGliL3BkZmpzLXN0dWIuanMiXSwic291cmNlc0NvbnRlbnQiOlsiLy8gRW1wdHkgc3R1YiB1c2VkIHNlcnZlci1zaWRlIHRvIHByZXZlbnQgcGRmanMtZGlzdCBmcm9tIGJlaW5nIGV2YWx1YXRlZCBpbiBOb2RlLmpzXG5tb2R1bGUuZXhwb3J0cyA9IHt9O1xuIl0sIm5hbWVzIjpbIm1vZHVsZSIsImV4cG9ydHMiXSwiaWdub3JlTGlzdCI6W10sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./src/lib/pdfjs-stub.js\n");
+eval("\n// Empty stub used server-side to prevent pdfjs-dist from being evaluated in Node.js\nmodule.exports = {};\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9zcmMvbGliL3BkZmpzLXN0dWIuanMiLCJtYXBwaW5ncyI6IjtBQUFBLG9GQUFvRjtBQUNwRkEsT0FBT0MsT0FBTyxHQUFHLENBQUMiLCJzb3VyY2VzIjpbIi9Vc2Vycy9hcHB1L0RvY3VtZW50cy9tZWRpY2FsLWFuYWx5c2lzL3NyYy9saWIvcGRmanMtc3R1Yi5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyIvLyBFbXB0eSBzdHViIHVzZWQgc2VydmVyLXNpZGUgdG8gcHJldmVudCBwZGZqcy1kaXN0IGZyb20gYmVpbmcgZXZhbHVhdGVkIGluIE5vZGUuanNcbm1vZHVsZS5leHBvcnRzID0ge307XG4iXSwibmFtZXMiOlsibW9kdWxlIiwiZXhwb3J0cyJdLCJpZ25vcmVMaXN0IjpbXSwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///(ssr)/./src/lib/pdfjs-stub.js\n");
 
 /***/ })
 

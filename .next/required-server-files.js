@@ -95,6 +95,7 @@ self.__SERVER_FILES_MANIFEST={
     "compiler": {},
     "expireTime": 31536000,
     "staticPageGenerationTimeout": 60,
+    "output": "standalone",
     "modularizeImports": {
       "@mui/icons-material": {
         "transform": "@mui/icons-material/{{member}}"
@@ -103,7 +104,7 @@ self.__SERVER_FILES_MANIFEST={
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/Users/appu/Documents/file-upload",
+    "outputFileTracingRoot": "/Users/appu/Documents/medical-analysis",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -306,11 +307,11 @@ self.__SERVER_FILES_MANIFEST={
       "@xenova/transformers"
     ],
     "turbopack": {
-      "root": "/Users/appu/Documents/file-upload"
+      "root": "/Users/appu/Documents/medical-analysis"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "/Users/appu/Documents/file-upload",
+  "appDir": "/Users/appu/Documents/medical-analysis",
   "relativeAppDir": "",
   "files": [
     ".next/routes-manifest.json",

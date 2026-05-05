@@ -9,6 +9,29 @@ import PdfViewer from './PdfViewer';
 import Toast from './Toast';
 import { useMedDocs } from '../context/MedDocsContext';
 
+const SAMPLE_IMAGES = [
+  {
+    href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_02_24%20AM.png',
+    label: 'Medical Imaging Grid',
+  },
+  {
+    href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_04_37%20AM.png',
+    label: 'Chest X-Ray Sample',
+  },
+  {
+    href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_05_53%20AM.png',
+    label: 'Ultrasound Sample',
+  },
+  {
+    href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_11_05%20AM.png',
+    label: 'CT Scan Sample',
+  },
+  {
+    href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_13_05%20AM.png',
+    label: 'MRI Sample',
+  },
+];
+
 export default function MedDocsApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -83,19 +106,15 @@ export default function MedDocsApp() {
 
         <div className="samples-banner" style={{ marginTop: 20 }}>
           <div className="samples-banner__text">
-            <h3>Sample medical PDFs for testing</h3>
-            <p>Download and drag into the upload zone above to see medical analysis in action</p>
+            <h3>Sample medical images for testing</h3>
+            <p>Download these image files and drag them into the upload zone above to test image analysis</p>
           </div>
           <div className="samples-banner__links">
-            <a className="sample-link" href="/samples/blood_report_cbc_metabolic.pdf" download>
-              <Download size={13} /> Blood Report
-            </a>
-            <a className="sample-link" href="/samples/chest_xray_radiology_report.pdf" download>
-              <Download size={13} /> Chest X-Ray
-            </a>
-            <a className="sample-link" href="/samples/clinical_assessment_hypertension.pdf" download>
-              <Download size={13} /> Clinical Assessment
-            </a>
+            {SAMPLE_IMAGES.map((sample) => (
+              <a key={sample.href} className="sample-link" href={sample.href} download>
+                <Download size={13} /> {sample.label}
+              </a>
+            ))}
           </div>
         </div>
 
