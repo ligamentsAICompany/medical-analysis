@@ -16,7 +16,7 @@ import { ThemeToggle } from '../../src/components/ThemeToggle';
 const FEATURES = [
   {
     icon: ScanLine,
-    title: 'Gemini-powered analysis',
+    title: 'Multi Model based analysis',
     text: 'Multimodal reasoning on PDFs and clinical imaging.',
   },
   {
