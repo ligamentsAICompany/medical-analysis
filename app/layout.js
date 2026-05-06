@@ -1,4 +1,6 @@
 import './globals.css';
+import './premium-ui.css';
+import './analysis-v2.css';
 import { Providers } from './providers';
 
 export const metadata = {

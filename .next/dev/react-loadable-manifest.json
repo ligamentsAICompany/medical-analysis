@@ -1,22 +1,4 @@
 {
-  "src/hooks/useAnalysis.js -> ../lib/ai": {
-    "id": "src/hooks/useAnalysis.js -> ../lib/ai",
-    "files": [
-      "static/chunks/_app-pages-browser_src_lib_ai_js.js"
-    ]
-  },
-  "src/hooks/useAnalysis.js -> ../lib/imageAnalysis": {
-    "id": "src/hooks/useAnalysis.js -> ../lib/imageAnalysis",
-    "files": [
-      "static/chunks/_app-pages-browser_src_lib_imageAnalysis_js.js"
-    ]
-  },
-  "src/lib/ai.js -> @xenova/transformers": {
-    "id": "src/lib/ai.js -> @xenova/transformers",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_xenova_transformers_src_models_js-_app-pages-browser_node_mod-daecac.js"
-    ]
-  },
   "src/lib/pdfExtract.js -> pdfjs-dist": {
     "id": "src/lib/pdfExtract.js -> pdfjs-dist",
     "files": [

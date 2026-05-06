@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Loader } from 'lucide-react';
 import { useMedDocs } from '../../../src/context/MedDocsContext';
 import AnalysisPageView from '../../../src/components/AnalysisPageView';
 import Toast from '../../../src/components/Toast';
@@ -49,8 +50,14 @@ export default function AnalysisDocPage() {
     return (
       <div className="app">
         <AppHeader />
-        <div className="analysis-page analysis-page--empty">
-          <p className="text-muted">Loading…</p>
+        <div className="analysis-page analysis-page--v2 analysis-page--empty analysis-page--premium">
+          <div className="analysis-shell">
+            <div className="analysis-empty-state" role="status" aria-live="polite">
+              <Loader size={28} className="spin analysis-empty-state__icon" aria-hidden />
+              <p className="analysis-empty-state__title">Loading document</p>
+              <p className="analysis-empty-state__sub text-muted">Preparing your workspace…</p>
+            </div>
+          </div>
         </div>
         <Toast toasts={toasts} onRemove={removeToast} />
       </div>

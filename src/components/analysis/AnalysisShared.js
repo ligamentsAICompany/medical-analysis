@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Sparkles, Copy, ChevronDown, ChevronUp, AlertTriangle, Loader, RefreshCw,
 } from 'lucide-react';
@@ -35,10 +35,17 @@ const ENTITY_LABELS = {
   medications: 'Medications', locations: 'Locations',
 };
 
+const ANALYSING_MESSAGES = [
+  'Preparing clinical intelligence…',
+  'Care agent is working…',
+  'Generating medical insight…',
+  'From data to care action…',
+];
+
 function Section({ title, children, defaultOpen = true, badge }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="panel-section analysis-bento__section">
+    <div className="panel-section analysis-bento__section analysis-panel-card">
       <button type="button" className="panel-section__header" onClick={() => setOpen(o => !o)}>
         <span className="panel-section__title-row">
           {title}
@@ -187,6 +194,22 @@ function MedicationList({ text }) {
 }
 
 export function AiProgressBar({ aiLoadProgress }) {
+  const isGeminiWait =
+    aiLoadProgress?.file === 'Gemini' &&
+    aiLoadProgress?.total === 1 &&
+    aiLoadProgress?.loaded === 0;
+
+  if (isGeminiWait) {
+    return (
+      <div className="ai-inline-progress">
+        <Loader size={13} className="spin" />
+        <div className="ai-inline-progress__right">
+          <span className="ai-inline-progress__label">Calling Gemini…</span>
+        </div>
+      </div>
+    );
+  }
+
   const pct = aiLoadProgress?.total
     ? Math.round((aiLoadProgress.loaded / aiLoadProgress.total) * 100)
     : null;
@@ -220,6 +243,18 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
   const labValues      = analysis?.labValues || [];
   const abnormalCount  = labValues.filter(v => v.flag === 'HIGH' || v.flag === 'LOW').length;
   const isAnalysing    = doc.status === 'analysing';
+  const [analysingMessageIdx, setAnalysingMessageIdx] = useState(0);
+
+  useEffect(() => {
+    if (!isAnalysing) {
+      setAnalysingMessageIdx(0);
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      setAnalysingMessageIdx((prev) => (prev + 1) % ANALYSING_MESSAGES.length);
+    }, 1800);
+    return () => window.clearInterval(intervalId);
+  }, [isAnalysing]);
 
   const copyText = () => {
     if (textContent) {
@@ -230,11 +265,11 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
   };
 
   return (
-    <div className="analysis-page__body-inner">
+    <div className="analysis-page__body-inner analysis-doc-shell">
       {isAnalysing && (
         <div className="ai-analysing-banner">
           <Loader size={15} className="spin" />
-          <span>Extracting text and running analysis…</span>
+          <span>{ANALYSING_MESSAGES[analysingMessageIdx]}</span>
         </div>
       )}
 
@@ -355,7 +390,11 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
                 <div>
                   <p className="ai-enhance-box__title">AI analysis in progress</p>
                   <p className="ai-enhance-box__sub">
-                    {aiLoadProgress?.file ? `Downloading ${aiLoadProgress.file}…` : 'Running Transformers.js models…'}
+                    {aiLoadProgress?.file === 'Gemini'
+                      ? 'Calling Google Gemini…'
+                      : aiLoadProgress?.file
+                        ? `Downloading ${aiLoadProgress.file}…`
+                        : 'Running AI…'}
                   </p>
                 </div>
               </div>
@@ -374,17 +413,21 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
             </div>
           )}
 
-          {!analysis?.aiEnhanced && !aiLoading && textContent && doc.status === 'ready' && (
+          {!aiLoading && textContent && doc.status === 'ready' && (
             <div className="ai-enhance-box">
               <div className="ai-enhance-box__text">
                 <RefreshCw size={16} />
                 <div>
-                  <p className="ai-enhance-box__title">Re-run AI Analysis</p>
-                  <p className="ai-enhance-box__sub">Models are cached — re-run to refresh AI results.</p>
+                  <p className="ai-enhance-box__title">Re-run Gemini</p>
+                  <p className="ai-enhance-box__sub">Generate a fresh structured analysis from the extracted text.</p>
                 </div>
               </div>
-              <button type="button" className="btn btn--primary btn--sm" onClick={() => onEnhanceAI(doc.id, textContent)}>
-                Retry AI
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={() => onEnhanceAI(doc.id, textContent, doc.name)}
+              >
+                Re-run
               </button>
             </div>
           )}

@@ -10,7 +10,9 @@ function ReportHeader({ doc, imageAnalysis }) {
     <div className="img-report-header">
       <div className="img-report-header__badge">
         <Sparkles size={13} />
-        <span>AI Analysis · Static Report</span>
+        <span>
+        Clinical Intelligence Report
+        </span>
       </div>
       <h2 className="img-report-header__exam">{imageAnalysis.examTitle}</h2>
 
@@ -20,7 +22,6 @@ function ReportHeader({ doc, imageAnalysis }) {
         <MetaRow label="Accession No."      value={imageAnalysis.accessionNumber} />
         <MetaRow label="Referring Physician" value={imageAnalysis.referringPhysician} />
         <MetaRow label="Reporting Radiologist" value={imageAnalysis.radiologist} />
-        <MetaRow label="File"               value={doc.name} />
       </div>
     </div>
   );
@@ -76,19 +77,64 @@ function ImpressionList({ items }) {
   );
 }
 
+function AiInsightsSection({ aiInsights }) {
+  if (!aiInsights) return null;
+  const {
+    executiveSummary,
+    insights = [],
+    limitations = [],
+    careCoordinationNotes = [],
+  } = aiInsights;
+  const hasContent =
+    (executiveSummary && executiveSummary.trim()) ||
+    insights.length > 0 ||
+    limitations.length > 0 ||
+    careCoordinationNotes.length > 0;
+  if (!hasContent) return null;
+
+  return (
+    <ReportSection title="AI clinical insights" accentColor="#4f46e5" defaultOpen>
+      {executiveSummary ? (
+        <p className="img-text img-insights__exec">{executiveSummary}</p>
+      ) : null}
+      {insights.length > 0 ? (
+        <>
+          <p className="img-insights__label">Key insights</p>
+          <FindingsList items={insights} />
+        </>
+      ) : null}
+      {limitations.length > 0 ? (
+        <>
+          <p className="img-insights__label">Limitations</p>
+          <FindingsList items={limitations} />
+        </>
+      ) : null}
+      {careCoordinationNotes.length > 0 ? (
+        <>
+          <p className="img-insights__label">Care coordination and documentation</p>
+          <FindingsList items={careCoordinationNotes} />
+        </>
+      ) : null}
+      <p className="img-insights__disclaimer">
+        AI insights support documentation and workflow; they are not a substitute for qualified
+        clinical judgment or formal imaging interpretation.
+      </p>
+    </ReportSection>
+  );
+}
+
 function ImagePanel({ doc }) {
   const src = doc.objectUrl;
   if (!src) return null;
+  const altText = doc.name ? `Source upload: ${doc.name}` : 'Uploaded medical image'
   return (
-    <div className="img-preview-panel">
-      <p className="img-preview-panel__label">Uploaded Image</p>
+    <div className="img-preview-panel img-preview-panel--below-report">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
-        alt={doc.name}
+        alt={altText}
         className="img-preview-panel__img"
       />
-      <p className="img-preview-panel__filename">{doc.name}</p>
     </div>
   );
 }
@@ -97,23 +143,19 @@ function ImagePanel({ doc }) {
 
 export function ImageAnalysisView({ doc }) {
   const ia = doc?.analysis?.imageAnalysis;
+  const aiInsights = doc?.analysis?.aiInsights;
   if (!ia) return null;
 
   return (
-    <div className="img-report">
-      {/* Two-column layout: image on the left, report on the right */}
+    <div className="img-report img-report--v2">
       <div className="img-report__layout">
-
-        {/* LEFT — image preview */}
-        <div className="img-report__image-col">
-          <ImagePanel doc={doc} />
-        </div>
-
-        {/* RIGHT — structured report */}
+        {/* AI report first */}
         <div className="img-report__report-col">
           <ReportHeader doc={doc} imageAnalysis={ia} />
 
           <div className="img-report__sections">
+            <AiInsightsSection aiInsights={aiInsights} />
+
             <ReportSection title="Clinical Indication" accentColor="#0f766e" defaultOpen>
               <p className="img-text">{ia.indication}</p>
             </ReportSection>
@@ -130,15 +172,11 @@ export function ImageAnalysisView({ doc }) {
               <ImpressionList items={ia.impression} />
             </ReportSection>
           </div>
+        </div>
 
-          <div className="img-report__footer-note">
-            <Sparkles size={12} />
-            <span>
-              This is an AI-generated static report for demonstration purposes.
-              Clinical decisions must be based on formal radiologist review.
-              {ia.isStatic && ' API integration planned for real-time analysis.'}
-            </span>
-          </div>
+        {/* Source image below the analysis */}
+        <div className="img-report__image-col">
+          <ImagePanel doc={doc} />
         </div>
       </div>
     </div>

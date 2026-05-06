@@ -1,149 +1,169 @@
 'use client';
 
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { extractTextFromPdf } from '../lib/pdfExtract';
 import { analyzeDocument } from '../lib/heuristics';
+import { parseLabValues } from '../lib/labParser';
+import { analyzeWithGemini } from '../lib/geminiClient';
 
-export function useAnalysis({ updateDocument, addToast }) {
-  const [aiLoadingId, setAiLoadingId]     = useState(null);   // which doc is being AI-enhanced
-  const [aiLoadProgress, setAiLoadProgress] = useState(null);
-  const [modelsReady, setModelsReady]     = useState(false);
-  const [modelsPreloading, setModelsPreloading] = useState(false);
-
-  // Queue of { id, text } waiting for models to finish loading
-  const pendingRef = useRef([]);
-
-  // ── Pre-load AI models on mount ──────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    setModelsPreloading(true);
-
-    import('../lib/ai').then(({ loadModels, isLoaded }) => {
-      if (isLoaded()) {
-        if (!cancelled) { setModelsReady(true); setModelsPreloading(false); }
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const s = reader.result;
+      if (typeof s !== 'string') {
+        reject(new Error('Could not read file'));
         return;
       }
-      loadModels((data) => {
-        if (!cancelled && data.status === 'progress') {
-          setAiLoadProgress({ loaded: data.loaded, total: data.total, file: data.file });
-        }
-      }).then(() => {
-        if (cancelled) return;
-        setModelsReady(true);
-        setModelsPreloading(false);
-        setAiLoadProgress(null);
-        // Drain any docs that were uploaded while models were loading
-        const queue = pendingRef.current.splice(0);
-        queue.forEach(({ id, text }) => runAiEnhance(id, text));
-      }).catch(() => {
-        if (!cancelled) { setModelsPreloading(false); setAiLoadProgress(null); }
-      });
-    });
+      const i = s.indexOf(',');
+      resolve(i >= 0 ? s.slice(i + 1) : s);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Read failed'));
+    reader.readAsDataURL(file);
+  });
+}
 
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+function mergedLabValues(geminiAnalysis, text) {
+  if (geminiAnalysis.labValues?.length > 0) return geminiAnalysis.labValues;
+  return parseLabValues(text || '');
+}
+
+export function useAnalysis({ updateDocument, addToast }) {
+  const [aiLoadingId, setAiLoadingId] = useState(null);
+  const [aiLoadProgress, setAiLoadProgress] = useState(null);
+  const [modelsReady, setModelsReady] = useState(true);
+  const [modelsPreloading, setModelsPreloading] = useState(false);
+
+  useEffect(() => {
+    setModelsPreloading(false);
+    setModelsReady(true);
   }, []);
 
-  // ── Internal AI enhance ──────────────────────────────────────────────────────
-  const runAiEnhance = useCallback(async (id, text) => {
-    setAiLoadingId(id);
-    try {
-      const { loadModels, enhanceAnalysis } = await import('../lib/ai');
-      await loadModels((data) => {
-        if (data.status === 'progress') {
-          setAiLoadProgress({ loaded: data.loaded, total: data.total, file: data.file });
-        }
-      });
-      const aiResult = await enhanceAnalysis(text);
-      if (aiResult) {
+  const runGeminiAnalysis = useCallback(
+    async (id, text, fileName) => {
+      setAiLoadingId(id);
+      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
+      try {
+        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+          mode: 'text',
+          text,
+          filename: fileName || '',
+        });
+        const labValues = mergedLabValues(geminiAnalysis, text);
         updateDocument(id, (doc) => ({
           analysis: {
-            ...(doc.analysis || {}),
-            classification: aiResult.classification,
-            entities: { ...(doc.analysis?.entities || {}), ...aiResult.entities },
-            ...(aiResult.summary ? { summary: aiResult.summary } : {}),
-            aiEnhanced: true,
+            ...geminiAnalysis,
+            labValues,
           },
         }));
+      } catch (err) {
+        console.error('Gemini analysis failed', err);
+        addToast(err?.message || 'Gemini analysis failed', 'error');
+        throw err;
+      } finally {
+        setAiLoadingId(null);
+        setAiLoadProgress(null);
       }
-    } catch (err) {
-      console.error('AI enhancement failed', err);
-    } finally {
-      setAiLoadingId(null);
-      setAiLoadProgress(null);
-    }
-  }, [updateDocument]);
+    },
+    [updateDocument, addToast]
+  );
 
-  // ── Analyse a newly uploaded file (heuristics → AI auto) ─────────────────────
-  const analyzeFile = useCallback(async (id, file) => {
-    updateDocument(id, { status: 'analysing' });
-    try {
+  const analyzeFile = useCallback(
+    async (id, file) => {
+      updateDocument(id, { status: 'analysing' });
+
       let text = '';
-      if (file.type === 'application/pdf') {
-        text = await extractTextFromPdf(file);
-      } else if (file.type.startsWith('text/')) {
-        text = await file.text();
-      } else if (file.type.startsWith('image/')) {
-        // Generate static image analysis immediately (no model needed)
-        const { generateImageAnalysis } = await import('../lib/imageAnalysis');
-        const imageAnalysis = generateImageAnalysis(file);
-
-        // Also try OCR for any text content, but don't block on it
-        try {
-          const aiMod = await import('../lib/ai');
-          if (aiMod.isLoaded()) {
-            text = await aiMod.extractTextFromImage(file);
-          } else {
-            text = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-          }
-        } catch {
+      try {
+        if (file.type === 'application/pdf') {
+          text = await extractTextFromPdf(file);
+        } else if (file.type.startsWith('text/')) {
+          text = await file.text();
+        } else if (!file.type.startsWith('image/')) {
           text = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
         }
+      } catch (err) {
+        console.error('Text extraction failed', err);
+        updateDocument(id, { status: 'error' });
+        addToast(`Could not read ${file.name}`, 'error');
+        return;
+      }
 
-        // Build a minimal heuristic analysis and attach the image-specific data
-        const baseAnalysis = analyzeDocument(text);
+      if (file.type.startsWith('image/')) {
+        setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
+        try {
+          const imageBase64 = await fileToBase64(file);
+          const { analysis: geminiAnalysis } = await analyzeWithGemini({
+            mode: 'image',
+            mimeType: file.type || 'image/png',
+            imageBase64,
+            filename: file.name,
+          });
+          console.log('[Gemini image] useAnalysis after upload — full analysis object', geminiAnalysis)
+          const ocrHint = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+          updateDocument(id, {
+            status: 'ready',
+            textContent: ocrHint,
+            analysis: {
+              ...geminiAnalysis,
+              labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+            },
+          });
+        } catch (err) {
+          console.error('Image analysis failed', err);
+          updateDocument(id, { status: 'error' });
+          addToast(err?.message || 'Image analysis failed', 'error');
+        } finally {
+          setAiLoadProgress(null);
+        }
+        return;
+      }
+
+      try {
+        setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
+        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+          mode: 'text',
+          text,
+          filename: file.name,
+        });
+        const labValues = mergedLabValues(geminiAnalysis, text);
         updateDocument(id, {
           status: 'ready',
           textContent: text,
           analysis: {
-            ...baseAnalysis,
-            classification: {
-              type: imageAnalysis.modality === 'X-Ray' ? 'Imaging Report'
-                  : imageAnalysis.modality === 'MRI'  ? 'Imaging Report'
-                  : imageAnalysis.modality === 'CT'   ? 'Imaging Report'
-                  : 'Imaging Report',
-              confidence: 0.97,
-            },
-            imageAnalysis,
-            aiEnhanced: true,
+            ...geminiAnalysis,
+            labValues,
           },
         });
-        return; // skip the generic heuristic path below
-      } else {
-        text = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      } catch (err) {
+        console.error('Gemini document analysis failed', err);
+        const fallback = analyzeDocument(text || file.name);
+        updateDocument(id, {
+          status: 'ready',
+          textContent: text || null,
+          analysis: {
+            ...fallback,
+            summary: `${fallback.summary}\n\n(Gemini unavailable: ${err?.message || 'unknown error'})`,
+          },
+        });
+        addToast(err?.message || 'Used offline heuristics — check Gemini API key', 'warning');
+      } finally {
+        setAiLoadProgress(null);
       }
+    },
+    [updateDocument, addToast]
+  );
 
-      const analysis = analyzeDocument(text);
-      updateDocument(id, { status: 'ready', textContent: text, analysis });
-
-      // Auto-run AI: queue if models still loading, run immediately if ready
-      if (modelsReady) {
-        runAiEnhance(id, text);
-      } else {
-        pendingRef.current.push({ id, text });
+  const enhanceWithAI = useCallback(
+    async (id, text, fileName = '') => {
+      try {
+        await runGeminiAnalysis(id, text, fileName);
+        addToast('AI analysis complete', 'success');
+      } catch {
+        /* error toast from runGeminiAnalysis */
       }
-    } catch (err) {
-      console.error('Analysis failed', err);
-      updateDocument(id, { status: 'error' });
-      addToast(`Analysis failed for ${file.name}`, 'error');
-    }
-  }, [updateDocument, addToast, modelsReady, runAiEnhance]);
-
-  // ── Manual re-run (retry button in panel) ────────────────────────────────────
-  const enhanceWithAI = useCallback(async (id, text) => {
-    await runAiEnhance(id, text);
-    addToast('AI analysis complete', 'success');
-  }, [runAiEnhance, addToast]);
+    },
+    [runGeminiAnalysis, addToast]
+  );
 
   const aiLoading = aiLoadingId !== null;
 

@@ -1,27 +1,4 @@
 {
-  "src/hooks/useAnalysis.js -> ../lib/ai": {
-    "id": 1419,
-    "files": [
-      "static/chunks/419.6009ddf8790ad875.js"
-    ]
-  },
-  "src/hooks/useAnalysis.js -> ../lib/imageAnalysis": {
-    "id": 9336,
-    "files": [
-      "static/chunks/336.ba113920cea6a95c.js"
-    ]
-  },
-  "src/lib/ai.js -> @xenova/transformers": {
-    "id": 6747,
-    "files": [
-      "static/chunks/590caa2a.19ce221eeffae610.js",
-      "static/chunks/6139e184.8a095bbc9bc257f8.js",
-      "static/chunks/b2db8554.893f30cae534d3b8.js",
-      "static/chunks/304.b69fb38610f3fda6.js",
-      "static/chunks/660.286d5aa9eb2c497f.js",
-      "static/chunks/279.00cad130f91bf0e0.js"
-    ]
-  },
   "src/lib/pdfExtract.js -> pdfjs-dist": {
     "id": 6898,
     "files": [

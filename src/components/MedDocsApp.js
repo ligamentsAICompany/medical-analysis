@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Download } from 'lucide-react';
+import { Download, Sparkles } from 'lucide-react';
 import UploadZone from './UploadZone';
 import DocumentTable from './DocumentTable';
 import PdfViewer from './PdfViewer';
@@ -13,23 +13,23 @@ import { useMedDocs } from '../context/MedDocsContext';
 const SAMPLE_IMAGES = [
   {
     href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_02_24%20AM.png',
-    label: 'Medical Imaging Grid',
+    label: 'Imaging grid',
   },
   {
     href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_04_37%20AM.png',
-    label: 'Chest X-Ray Sample',
+    label: 'Chest X-ray',
   },
   {
     href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_05_53%20AM.png',
-    label: 'Ultrasound Sample',
+    label: 'Ultrasound',
   },
   {
     href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_11_05%20AM.png',
-    label: 'CT Scan Sample',
+    label: 'CT Scan',
   },
   {
     href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_13_05%20AM.png',
-    label: 'MRI Sample',
+    label: 'MRI',
   },
 ];
 
@@ -44,10 +44,19 @@ export default function MedDocsApp() {
 
   const [viewerDoc, setViewerDoc] = useState(null);
 
+  const readyCount = useMemo(
+    () => documents.filter((d) => d.status === 'ready').length,
+    [documents]
+  );
+  const analysingCount = useMemo(
+    () => documents.filter((d) => d.status === 'analysing').length,
+    [documents]
+  );
+
   useEffect(() => {
     const viewId = searchParams.get('view');
     if (!viewId) return;
-    const d = documents.find(x => x.id === viewId);
+    const d = documents.find((x) => x.id === viewId);
     if (d && d.status === 'ready') {
       setViewerDoc(d);
       router.replace('/', { scroll: false });
@@ -77,29 +86,64 @@ export default function MedDocsApp() {
       <AppHeader />
 
       <main className="app-main">
-        <UploadZone onFiles={handleFiles} addToast={addToast} />
+        <div className="home-shell home-bento">
+          <section className="home-hero" aria-label="Workspace overview">
+            <div className="stat-card stat-card--indigo">
+              <span className="stat-card__label">Total documents</span>
+              <span className="stat-card__value">{documents.length}</span>
+              <span className="stat-card__accent" aria-hidden />
+            </div>
+            <div className="stat-card stat-card--sky">
+              <span className="stat-card__label">Ready for review</span>
+              <span className="stat-card__value">{readyCount}</span>
+              <span className="stat-card__accent" aria-hidden />
+            </div>
+            <div className="stat-card stat-card--teal">
+              <span className="stat-card__label">In analysis</span>
+              <span className="stat-card__value">{analysingCount}</span>
+              <span className="stat-card__accent" aria-hidden />
+            </div>
+          </section>
 
-        <div className="samples-banner" style={{ marginTop: 20 }}>
-          <div className="samples-banner__text">
-            <h3>Sample medical images for testing</h3>
-            <p>Download these image files and drag them into the upload zone above to test image analysis</p>
-          </div>
-          <div className="samples-banner__links">
-            {SAMPLE_IMAGES.map((sample) => (
-              <a key={sample.href} className="sample-link" href={sample.href} download>
-                <Download size={13} /> {sample.label}
-              </a>
-            ))}
-          </div>
-        </div>
+          <UploadZone onFiles={handleFiles} addToast={addToast} />
 
-        <div className="section-gap">
-          <DocumentTable
-            documents={documents}
-            onView={setViewerDoc}
-            onAnalysis={handleOpenAnalysis}
-            onDelete={handleDelete}
-          />
+          <section className="samples-bento" aria-labelledby="samples-heading">
+            <div className="samples-bento__intro">
+              <div className="samples-bento__icon-wrap" aria-hidden>
+                <Sparkles size={18} className="samples-bento__icon" />
+              </div>
+              <div>
+                <h2 id="samples-heading" className="samples-bento__title">
+                 Images (download)
+                </h2>
+                <p className="samples-bento__lead">
+                  Grab a PNG and drop it on the zone above — AI will generate a clinical intelligence report.
+                </p>
+              </div>
+            </div>
+            <div className="samples-bento__grid">
+              {SAMPLE_IMAGES.map((sample) => (
+                <a
+                  key={sample.href}
+                  className="sample-link sample-link--premium"
+                  href={sample.href}
+                  download
+                >
+                  <Download size={14} aria-hidden />
+                  {sample.label}
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <div className="section-gap">
+            <DocumentTable
+              documents={documents}
+              onView={setViewerDoc}
+              onAnalysis={handleOpenAnalysis}
+              onDelete={handleDelete}
+            />
+          </div>
         </div>
       </main>
 

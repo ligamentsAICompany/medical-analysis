@@ -1,6 +1,11 @@
 {
   "/_not-found/page": "/_not-found",
   "/_global-error/page": "/_global-error",
+  "/api/analyze/route": "/api/analyze",
+  "/api/auth/login/route": "/api/auth/login",
+  "/api/auth/logout/route": "/api/auth/logout",
+  "/api/auth/me/route": "/api/auth/me",
   "/analysis/[docId]/page": "/analysis/[docId]",
+  "/login/page": "/login",
   "/page": "/"
 }
