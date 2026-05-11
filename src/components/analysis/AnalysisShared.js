@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Sparkles, Copy, ChevronDown, ChevronUp, AlertTriangle, Loader, RefreshCw,
+  Sparkles, ChevronDown, ChevronUp, AlertTriangle, Loader, RefreshCw,
 } from 'lucide-react';
 
 export function ConfidenceBar({ value }) {
@@ -193,6 +193,16 @@ function MedicationList({ text }) {
   );
 }
 
+function InsightList({ items }) {
+  return (
+    <ul className="doc-insights__list">
+      {items.map((item, i) => (
+        <li key={i} className="doc-insights__item">{item}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function AiProgressBar({ aiLoadProgress }) {
   const isGeminiWait =
     aiLoadProgress?.file === 'Gemini' &&
@@ -204,7 +214,7 @@ export function AiProgressBar({ aiLoadProgress }) {
       <div className="ai-inline-progress">
         <Loader size={13} className="spin" />
         <div className="ai-inline-progress__right">
-          <span className="ai-inline-progress__label">Calling Gemini…</span>
+          <span className="ai-inline-progress__label">Calling AI…</span>
         </div>
       </div>
     );
@@ -231,8 +241,6 @@ export function AiProgressBar({ aiLoadProgress }) {
 }
 
 export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgress }) {
-  const [copied, setCopied] = useState(false);
-
   if (!doc) return null;
   const { analysis, textContent } = doc;
   const docType = analysis?.classification?.type || '';
@@ -243,6 +251,13 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
   const labValues      = analysis?.labValues || [];
   const abnormalCount  = labValues.filter(v => v.flag === 'HIGH' || v.flag === 'LOW').length;
   const isAnalysing    = doc.status === 'analysing';
+  const aiInsights     = analysis?.aiInsights || null;
+  const hasAiInsights = Boolean(
+    aiInsights?.executiveSummary ||
+    aiInsights?.insights?.length ||
+    aiInsights?.limitations?.length ||
+    aiInsights?.careCoordinationNotes?.length
+  );
   const [analysingMessageIdx, setAnalysingMessageIdx] = useState(0);
 
   useEffect(() => {
@@ -256,14 +271,6 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
     return () => window.clearInterval(intervalId);
   }, [isAnalysing]);
 
-  const copyText = () => {
-    if (textContent) {
-      navigator.clipboard.writeText(textContent);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
     <div className="analysis-page__body-inner analysis-doc-shell">
       {isAnalysing && (
@@ -275,7 +282,7 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
 
       <div className="analysis-bento">
         <div className="analysis-bento__main">
-          <Section title="Document Classification">
+          <Section title="Clinical Intelligence Report">
             {analysis?.classification ? (
               <>
                 <div className="classification-header">
@@ -297,6 +304,32 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
               <p className="text-muted">Summary will appear after AI analysis.</p>
             )}
           </Section>
+
+          {hasAiInsights && (
+            <Section title="AI Insights">
+              {aiInsights.executiveSummary ? (
+                <p className="doc-insights__exec">{aiInsights.executiveSummary}</p>
+              ) : null}
+              {aiInsights.insights?.length > 0 ? (
+                <div className="doc-insights__group">
+                  <p className="doc-insights__label">Key insights</p>
+                  <InsightList items={aiInsights.insights} />
+                </div>
+              ) : null}
+              {aiInsights.limitations?.length > 0 ? (
+                <div className="doc-insights__group">
+                  <p className="doc-insights__label">Limitations</p>
+                  <InsightList items={aiInsights.limitations} />
+                </div>
+              ) : null}
+              {aiInsights.careCoordinationNotes?.length > 0 ? (
+                <div className="doc-insights__group">
+                  <p className="doc-insights__label">Care coordination</p>
+                  <InsightList items={aiInsights.careCoordinationNotes} />
+                </div>
+              ) : null}
+            </Section>
+          )}
 
           {(isLabReport || labValues.length > 0) && (
             <Section
@@ -358,7 +391,7 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
           </Section>
         </div>
 
-        <aside className="analysis-bento__side">
+        {/* <aside className="analysis-bento__side">
           {analysis?.metrics && Object.keys(analysis.metrics).length > 0 && (
             <Section title="Patient Details" defaultOpen>
               <dl className="metrics-list">
@@ -369,17 +402,6 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
                   </div>
                 ))}
               </dl>
-            </Section>
-          )}
-
-          {textContent && (
-            <Section title="Text Preview" defaultOpen={false}>
-              <div className="raw-text-wrap">
-                <pre className="raw-text">{textContent.slice(0, 600)}{textContent.length > 600 ? '…' : ''}</pre>
-                <button type="button" className="btn btn--ghost btn--sm" onClick={copyText}>
-                  <Copy size={13} /> {copied ? 'Copied!' : 'Copy text'}
-                </button>
-              </div>
             </Section>
           )}
 
@@ -431,7 +453,7 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
               </button>
             </div>
           )}
-        </aside>
+        </aside> */}
       </div>
     </div>
   );

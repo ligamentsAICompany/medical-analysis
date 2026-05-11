@@ -9,12 +9,13 @@ const MedDocsContext = createContext(null);
 
 export function MedDocsProvider({ children }) {
   const { toasts, addToast, removeToast } = useToast();
-  const { documents, addDocument, updateDocument, deleteDocument } = useDocuments();
+  const { documents, addDocument, addImageBundle, updateDocument, deleteDocument } = useDocuments();
   const analysis = useAnalysis({ updateDocument, addToast });
 
   const value = {
     documents,
     addDocument,
+    addImageBundle,
     updateDocument,
     deleteDocument,
     toasts,

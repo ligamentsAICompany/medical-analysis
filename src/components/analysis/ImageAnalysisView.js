@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { isDicomFile, isGeminiVisionUpload, isTextBundleFile } from '../../lib/medicalFileTypes';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -123,18 +124,149 @@ function AiInsightsSection({ aiInsights }) {
   );
 }
 
-function ImagePanel({ doc }) {
-  const src = doc.objectUrl;
-  if (!src) return null;
-  const altText = doc.name ? `Source upload: ${doc.name}` : 'Uploaded medical image'
+function MultiImageStrip ({ doc, previewIndex, onSelectPreview }) {
+  const urls = doc.bundleObjectUrls?.length > 1 ? doc.bundleObjectUrls : null
+  if (!urls) return null
+  return (
+    <div
+      className="img-multi-strip"
+      role="tablist"
+      aria-label="Choose which upload to preview"
+    >
+      {urls.map((src, i) => {
+        const sliceFile = doc.bundleFiles?.[i]
+        const sliceIsDicom = sliceFile ? isDicomFile(sliceFile) : false
+        const sliceIsDoc = sliceFile ? isTextBundleFile(sliceFile) : false
+        const selected = i === previewIndex
+        return (
+          <button
+            key={`${doc.id}-strip-${i}`}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            aria-label={sliceFile?.name ? `Show preview ${i + 1}: ${sliceFile.name}` : `Show preview ${i + 1}`}
+            className={`img-multi-strip__cell${selected ? ' img-multi-strip__cell--selected' : ''}`}
+            onClick={() => onSelectPreview(i)}
+          >
+            {sliceIsDicom ? (
+              <div
+                className="img-multi-strip__dicom"
+                role="presentation"
+              >
+                <span className="img-multi-strip__dicom-label">DICOM</span>
+              </div>
+            ) : sliceIsDoc ? (
+              <div className="img-multi-strip__doc" role="presentation">
+                <span className="img-multi-strip__doc-label">
+                  {sliceFile?.type === 'application/pdf' ? 'PDF' : 'TXT'}
+                </span>
+              </div>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={src}
+                alt=""
+                className="img-multi-strip__thumb"
+              />
+            )}
+            <span className="img-multi-strip__idx">{i + 1}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function isPrimarySliceDicom (doc) {
+  if (doc.isImageBundle) return isDicomFile(doc.bundleFiles?.[0])
+  return isDicomFile(doc.file || { type: doc.fileType, name: doc.name })
+}
+
+function isSliceDicomAtIndex (doc, index) {
+  const f = doc.bundleFiles?.[index]
+  if (f) return isDicomFile(f)
+  return isDicomFile(doc.file || { type: doc.fileType, name: doc.name })
+}
+
+function firstVisionBundleIndex (doc) {
+  if (!doc.bundleFiles?.length) return 0
+  const i = doc.bundleFiles.findIndex((f) => isGeminiVisionUpload(f))
+  return i >= 0 ? i : 0
+}
+
+function ImagePanel ({ doc }) {
+  const urls = doc.bundleObjectUrls
+  const hasStrip = urls && urls.length > 1
+  const [previewIndex, setPreviewIndex] = useState(() =>
+    hasStrip ? firstVisionBundleIndex(doc) : 0
+  )
+
+  useEffect(() => {
+    if (doc.bundleObjectUrls && doc.bundleObjectUrls.length > 1) {
+      setPreviewIndex(firstVisionBundleIndex(doc))
+    } else {
+      setPreviewIndex(0)
+    }
+  }, [doc.id, doc.bundleObjectUrls, doc.bundleFiles])
+
+  const handleSelectPreview = (i) => {
+    setPreviewIndex(i)
+  }
+
+  const mainSrc = hasStrip ? urls[previewIndex] : doc.objectUrl
+  if (!mainSrc) return null
+
+  const sliceFile = hasStrip ? doc.bundleFiles?.[previewIndex] : doc.file
+  const sliceName = sliceFile?.name || doc.name
+  const altText = sliceName ? `Source upload: ${sliceName}` : 'Uploaded medical image'
+  const bundleHint = hasStrip
+    ? ` (${urls.length} files analysed together; showing ${previewIndex + 1} of ${urls.length})`
+    : ''
+  const mainIsDicom = hasStrip
+    ? isSliceDicomAtIndex(doc, previewIndex)
+    : isPrimarySliceDicom(doc)
+  const mainIsDoc = Boolean(sliceFile && isTextBundleFile(sliceFile))
+
   return (
     <div className="img-preview-panel img-preview-panel--below-report">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={altText}
-        className="img-preview-panel__img"
+      <MultiImageStrip
+        doc={doc}
+        previewIndex={previewIndex}
+        onSelectPreview={handleSelectPreview}
       />
+      {mainIsDoc ? (
+        <div
+          className="img-preview-panel__doc-placeholder"
+          role="note"
+          aria-label="Document preview"
+        >
+          <p className="img-preview-panel__doc-placeholder-text">
+            {sliceFile?.type === 'application/pdf' ? 'PDF' : 'Text'} file — open from the workspace to read full content. The report above combines this document with the selected imaging.
+          </p>
+        </div>
+      ) : mainIsDicom ? (
+        <div
+          className="img-preview-panel__dicom-placeholder"
+          role="note"
+          aria-label="DICOM file — raster preview not shown in the browser"
+        >
+          <p className="img-preview-panel__dicom-placeholder-text">
+            DICOM file — in-browser pixel preview is not shown. The clinical report above reflects AI analysis of the uploaded object.
+          </p>
+        </div>
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={mainSrc}
+          alt={`${altText}${bundleHint}`}
+          className="img-preview-panel__img"
+        />
+      )}
+      {hasStrip && (
+        <p className="img-preview-panel__caption">
+          Preview {previewIndex + 1} of {urls.length} — click a thumbnail to switch
+        </p>
+      )}
     </div>
   );
 }

@@ -2,6 +2,14 @@
 
 import { useState, useCallback } from 'react';
 import { MOCK_DOCUMENTS } from '../lib/mockData';
+import {
+  DICOM_MIME,
+  effectiveVisionMimeType,
+  isDicomFile,
+  isGeminiVisionUpload,
+  isTextBundleFile,
+  partitionClinicalBundle,
+} from '../lib/medicalFileTypes';
 
 let nextId = 1;
 
@@ -11,10 +19,13 @@ export function useDocuments() {
   const addDocument = useCallback((file) => {
     const id = `doc-${Date.now()}-${nextId++}`;
     const objectUrl = URL.createObjectURL(file);
+    const fileType =
+      (file.type && file.type.trim()) ||
+      (isDicomFile(file) ? DICOM_MIME : file.type);
     const doc = {
       id,
       name: file.name,
-      fileType: file.type,
+      fileType,
       size: file.size,
       uploadedAt: new Date().toISOString(),
       status: 'uploading',
@@ -23,8 +34,58 @@ export function useDocuments() {
       objectUrl,
       textContent: null,
       analysis: null,
+      isImageBundle: false,
+      bundleFiles: null,
+      bundleObjectUrls: null,
+      userFeedback: null,
     };
     setDocuments(prev => [doc, ...prev]);
+    return id;
+  }, []);
+
+  /**
+   * Several files → one document, one combined AI analysis.
+   * Vision-only: multiple images/DICOM. Mixed: PDF/TXT + imaging (same patient).
+   */
+  const addImageBundle = useCallback((files) => {
+    const id = `doc-${Date.now()}-${nextId++}`;
+    const bundleObjectUrls = files.map((f) => URL.createObjectURL(f));
+    const { textFiles, visionFiles, isFullPartition } = partitionClinicalBundle(files);
+    const bundleHasDocuments = textFiles.length > 0;
+    const primaryIdx = Math.max(
+      0,
+      files.findIndex((f) => isGeminiVisionUpload(f))
+    );
+    const primaryFile = files[primaryIdx] || files[0];
+    const shortNames = files.map((f) => f.name).slice(0, 2).join(', ');
+    const name =
+      bundleHasDocuments && isFullPartition
+        ? files.length > 2
+          ? `Combined report (${shortNames} +${files.length - 2} more)`
+          : `Combined report (${shortNames})`
+        : files.length > 2
+          ? `${files.length} images (${shortNames} +${files.length - 2} more)`
+          : `${files.length} images (${shortNames})`;
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+    const doc = {
+      id,
+      name,
+      fileType: effectiveVisionMimeType(primaryFile),
+      size: totalSize,
+      uploadedAt: new Date().toISOString(),
+      status: 'uploading',
+      isMock: false,
+      file: primaryFile,
+      objectUrl: bundleObjectUrls[primaryIdx],
+      textContent: null,
+      analysis: null,
+      isImageBundle: true,
+      bundleHasDocuments: bundleHasDocuments && isFullPartition,
+      bundleFiles: files,
+      bundleObjectUrls,
+      userFeedback: null,
+    };
+    setDocuments((prev) => [doc, ...prev]);
     return id;
   }, []);
 
@@ -38,12 +99,22 @@ export function useDocuments() {
   }, []);
 
   const deleteDocument = useCallback((id) => {
-    setDocuments(prev => {
-      const doc = prev.find(d => d.id === id);
-      if (doc?.objectUrl) URL.revokeObjectURL(doc.objectUrl);
-      return prev.filter(d => d.id !== id);
+    setDocuments((prev) => {
+      const doc = prev.find((d) => d.id === id);
+      if (doc?.bundleObjectUrls?.length) {
+        doc.bundleObjectUrls.forEach((u) => URL.revokeObjectURL(u));
+      } else if (doc?.objectUrl) {
+        URL.revokeObjectURL(doc.objectUrl);
+      }
+      const feedbackUrls = doc?.userFeedback?.attachments
+        ?.map((a) => a.objectUrl)
+        .filter(Boolean);
+      if (feedbackUrls?.length) {
+        feedbackUrls.forEach((u) => URL.revokeObjectURL(u));
+      }
+      return prev.filter((d) => d.id !== id);
     });
   }, []);
 
-  return { documents, addDocument, updateDocument, deleteDocument };
+  return { documents, addDocument, addImageBundle, updateDocument, deleteDocument };
 }

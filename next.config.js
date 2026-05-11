@@ -1,26 +1,25 @@
-const path = require('path');
-
-/** @type {import('next').NextConfig} */
+/**
+ * Next.js 16 defaults to Turbopack. Use `turbopack.resolveAlias` with project-relative paths
+ * (not absolute paths — Turbopack rejects those for some targets).
+ *
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
   output: 'standalone',
 
   serverExternalPackages: ['@xenova/transformers'],
 
-  webpack: (config, { isServer }) => {
-    config.resolve.alias.canvas = false;
-
-    if (isServer) {
-      // pdfjs-dist uses browser-only APIs (DOMMatrix etc.) — replace with empty stub on server
-      config.resolve.alias['pdfjs-dist'] = path.resolve(__dirname, 'src/lib/pdfjs-stub.js');
-    } else {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'sharp$': false,
-        'onnxruntime-node$': false,
-      };
-    }
-
-    return config;
+  turbopack: {
+    resolveAlias: {
+      canvas: './src/lib/empty-module.js',
+      sharp: './src/lib/empty-module.js',
+      'onnxruntime-node': './src/lib/empty-module.js',
+      // Server/RSC must not evaluate real pdfjs; browser keeps the real package.
+      'pdfjs-dist': {
+        browser: 'pdfjs-dist',
+        default: './src/lib/pdfjs-stub.js',
+      },
+    },
   },
 };
 

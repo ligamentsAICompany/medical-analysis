@@ -6,6 +6,13 @@ import { analyzeDocument } from '../lib/heuristics';
 import { parseLabValues } from '../lib/labParser';
 import { analyzeWithGemini } from '../lib/geminiClient';
 
+const MAX_GEMINI_TEXT_CHARS = 120_000;
+import {
+  effectiveVisionMimeType,
+  isGeminiVisionUpload,
+  partitionClinicalBundle,
+} from '../lib/medicalFileTypes';
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -68,6 +75,116 @@ export function useAnalysis({ updateDocument, addToast }) {
     [updateDocument, addToast]
   );
 
+  const analyzeImageBundle = useCallback(
+    async (id, files) => {
+      if (!files?.length || files.length < 2) return
+      const visionFiles = files.filter((f) => isGeminiVisionUpload(f))
+      if (visionFiles.length < 2) {
+        updateDocument(id, { status: 'error' })
+        addToast('Combined imaging bundle needs at least two image or DICOM files', 'error')
+        return
+      }
+      updateDocument(id, { status: 'analysing' })
+      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 })
+      try {
+        const images = await Promise.all(
+          visionFiles.map(async (file) => ({
+            mimeType: effectiveVisionMimeType(file),
+            imageBase64: await fileToBase64(file),
+            filename: file.name,
+          }))
+        )
+        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+          mode: 'multiImage',
+          images,
+        })
+        const ocrHint = visionFiles.map((f) => f.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')).join(' · ')
+        updateDocument(id, {
+          status: 'ready',
+          textContent: ocrHint,
+          analysis: {
+            ...geminiAnalysis,
+            labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+            multiImageCount: visionFiles.length,
+          },
+        })
+      } catch (err) {
+        console.error('Multi-image analysis failed', err)
+        updateDocument(id, { status: 'error' })
+        addToast(err?.message || 'Multi-image analysis failed', 'error')
+      } finally {
+        setAiLoadProgress(null)
+      }
+    },
+    [updateDocument, addToast]
+  )
+
+  const analyzeMixedMediaBundle = useCallback(
+    async (id, files) => {
+      if (!files?.length || files.length < 2) return
+      const { textFiles, visionFiles, isFullPartition } = partitionClinicalBundle(files)
+      if (!isFullPartition || textFiles.length < 1 || visionFiles.length < 1) {
+        updateDocument(id, { status: 'error' })
+        addToast('Combined upload must be only PDF/TXT plus imaging files', 'error')
+        return
+      }
+      updateDocument(id, { status: 'analysing' })
+      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 })
+      try {
+        const textBlocks = await Promise.all(
+          textFiles.map(async (tf) => {
+            let body = ''
+            if (tf.type === 'application/pdf') {
+              body = await extractTextFromPdf(tf)
+            } else if (tf.type === 'text/plain') {
+              body = await tf.text()
+            }
+            return `\n\n--- ${tf.name} ---\n\n${body}`
+          })
+        )
+        let combinedText = textBlocks.join('')
+        if (!combinedText.trim()) {
+          combinedText =
+            `[No extractable text from: ${textFiles.map((f) => f.name).join(', ')}. ` +
+            'Use the attached imaging only; note missing clinical document context in limitations.]'
+        }
+        if (combinedText.length > MAX_GEMINI_TEXT_CHARS) {
+          combinedText = combinedText.slice(0, MAX_GEMINI_TEXT_CHARS)
+        }
+        const images = await Promise.all(
+          visionFiles.map(async (file) => ({
+            mimeType: effectiveVisionMimeType(file),
+            imageBase64: await fileToBase64(file),
+            filename: file.name,
+          }))
+        )
+        const textFilename = textFiles.map((f) => f.name).join('; ')
+        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+          mode: 'docAndImages',
+          text: combinedText,
+          textFilename,
+          images,
+        })
+        updateDocument(id, {
+          status: 'ready',
+          textContent: combinedText,
+          analysis: {
+            ...geminiAnalysis,
+            labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+            multiImageCount: visionFiles.length,
+          },
+        })
+      } catch (err) {
+        console.error('Mixed document + imaging analysis failed', err)
+        updateDocument(id, { status: 'error' })
+        addToast(err?.message || 'Combined document and imaging analysis failed', 'error')
+      } finally {
+        setAiLoadProgress(null)
+      }
+    },
+    [updateDocument, addToast]
+  )
+
   const analyzeFile = useCallback(
     async (id, file) => {
       updateDocument(id, { status: 'analysing' });
@@ -78,7 +195,7 @@ export function useAnalysis({ updateDocument, addToast }) {
           text = await extractTextFromPdf(file);
         } else if (file.type.startsWith('text/')) {
           text = await file.text();
-        } else if (!file.type.startsWith('image/')) {
+        } else if (!isGeminiVisionUpload(file)) {
           text = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
         }
       } catch (err) {
@@ -88,13 +205,13 @@ export function useAnalysis({ updateDocument, addToast }) {
         return;
       }
 
-      if (file.type.startsWith('image/')) {
+      if (isGeminiVisionUpload(file)) {
         setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
         try {
           const imageBase64 = await fileToBase64(file);
           const { analysis: geminiAnalysis } = await analyzeWithGemini({
             mode: 'image',
-            mimeType: file.type || 'image/png',
+            mimeType: effectiveVisionMimeType(file),
             imageBase64,
             filename: file.name,
           });
@@ -169,11 +286,13 @@ export function useAnalysis({ updateDocument, addToast }) {
 
   return {
     analyzeFile,
+    analyzeImageBundle,
+    analyzeMixedMediaBundle,
     enhanceWithAI,
     aiLoading,
     aiLoadingId,
     aiLoadProgress,
     modelsReady,
     modelsPreloading,
-  };
+  }
 }

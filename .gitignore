@@ -11,6 +11,16 @@
 # production
 /build
 
+# Next.js — build output & caches (never commit; regenerates on `next dev` / `next build`)
+.next/
+out/
+
+# Vercel deploy metadata (local)
+.vercel
+
+# Turbopack / monorepo tool caches
+.turbo
+
 # misc
 .DS_Store
 .env

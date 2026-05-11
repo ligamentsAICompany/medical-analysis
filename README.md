@@ -56,7 +56,7 @@ Three realistic medical PDFs included in `public/samples/`:
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router, webpack mode) |
+| Framework | Next.js 16 (App Router, Turbopack default) |
 | UI | React 19, lucide-react icons |
 | PDF extraction | pdfjs-dist v5 (browser-only, dynamic import) |
 | AI / NLP | @xenova/transformers v2 (100% in-browser WASM) |
@@ -68,10 +68,16 @@ Three realistic medical PDFs included in `public/samples/`:
 ## Project Structure
 
 ```
-app/
+src/app/
   layout.js          # Root Next.js layout + metadata
   page.js            # Entry: lazy-loads MedDocsApp with 'use client'
-  globals.css        # All styles (variables, layout, components)
+  globals.css        # Global styles (variables, layout, components)
+  premium-ui.css     # Premium UI tokens / utilities
+  analysis-v2.css    # Analysis page styling
+  providers.js       # Client providers (theme, auth, MedDocs)
+  login/page.js      # Login route
+  analysis/[docId]/page.js  # Full-page analysis route
+  api/               # Route handlers (analyze, auth)
 
 src/
   components/
@@ -124,7 +130,7 @@ node scripts/generate-samples.js
 ### SSR / Browser-only libraries
 `pdfjs-dist` and `@xenova/transformers` use browser APIs (`DOMMatrix`, WebAssembly, etc.) and cannot run in Node.js.
 
-**Fix applied:** `next.config.js` aliases `pdfjs-dist` → `src/lib/pdfjs-stub.js` (empty module) in the server webpack build. Client build gets the real library. `@xenova/transformers` is kept in `serverExternalPackages`.
+**Fix applied:** `next.config.js` → `turbopack.resolveAlias` maps `pdfjs-dist` to `src/lib/pdfjs-stub.js` on the server and the real package in the browser; optional native deps stubbed via `src/lib/empty-module.js`. `@xenova/transformers` is in `serverExternalPackages`.
 
 ### AI model pre-loading
 `useAnalysis` calls `loadModels()` inside a `useEffect` on mount. A singleton `loadingPromise` in `ai.js` ensures concurrent callers share one download. Documents uploaded before models finish are queued in `pendingRef` and enhanced automatically once models are ready.

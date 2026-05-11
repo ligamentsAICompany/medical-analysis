@@ -2,12 +2,14 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileText } from 'lucide-react';
+import { DICOM_MIME, isDicomFile } from '../lib/medicalFileTypes';
 
-const ACCEPTED = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png'];
+const ACCEPTED = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', DICOM_MIME, 'application/x-dicom'];
 const MAX_MB = 20;
 
 function validate(file, addToast) {
-  if (!ACCEPTED.includes(file.type)) {
+  const typeOk = (file.type && ACCEPTED.includes(file.type)) || isDicomFile(file);
+  if (!typeOk) {
     addToast(`${file.name}: unsupported file type`, 'error');
     return false;
   }
@@ -53,7 +55,7 @@ export default function UploadZone({ onFiles, addToast }) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.txt,.jpg,.jpeg,.png"
+        accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.dcm,.dicom,application/pdf,text/plain,image/*,application/dicom"
         className="upload-zone__input"
         onChange={onInputChange}
       />
@@ -65,7 +67,7 @@ export default function UploadZone({ onFiles, addToast }) {
       </p>
       <p className="upload-zone__sub">
         <FileText size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-        PDF, TXT, JPG, PNG — max {MAX_MB} MB per file
+        PDF, TXT, images, DICOM (.dcm) — max {MAX_MB} MB each. Drop several images together for one imaging report, or PDF/TXT plus imaging for one combined patient report (up to 8 imaging files, 6 documents per request).
       </p>
     </div>
   );

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft, Eye, Download, Trash2, FileText, Image, Loader } from 'lucide-react';
 import { AnalysisDocumentBody } from './analysis/AnalysisShared';
 import { ImageAnalysisView } from './analysis/ImageAnalysisView';
+import { AnalysisFeedbackSection } from './analysis/AnalysisFeedback';
 import { AppHeader } from './AppHeader';
+import { isVisionStudyDoc } from '../lib/medicalFileTypes';
 
 const formatFileSize = (bytes) => {
   if (bytes == null || Number.isNaN(bytes)) return '—';
@@ -51,8 +53,8 @@ export default function AnalysisPageView({
   }, [doc]);
 
   const isImage = useMemo(
-    () => doc?.fileType?.startsWith('image/') || doc?.analysis?.imageAnalysis,
-    [doc?.fileType, doc?.analysis?.imageAnalysis]
+    () => isVisionStudyDoc(doc),
+    [doc]
   );
 
   const docTypeLabel = useMemo(() => {
@@ -61,14 +63,18 @@ export default function AnalysisPageView({
     return doc.analysis?.classification?.type || 'Document';
   }, [doc, isImage]);
 
-  if (!doc) return null;
-
-  const ia = doc.analysis?.imageAnalysis;
-  const classification = doc.analysis?.classification?.type;
+  const ia = doc?.analysis?.imageAnalysis;
+  const classification = doc?.analysis?.classification?.type;
   const [analysingMessageIdx, setAnalysingMessageIdx] = useState(0);
 
+  const showFeedbackPanel = useMemo(() => {
+    if (!doc || doc.status !== 'ready' || !doc.analysis) return false;
+    if (isImage) return Boolean(ia);
+    return true;
+  }, [doc, isImage, ia]);
+
   useEffect(() => {
-    if (doc.status !== 'analysing') {
+    if (!doc || doc.status !== 'analysing') {
       setAnalysingMessageIdx(0);
       return undefined;
     }
@@ -76,7 +82,9 @@ export default function AnalysisPageView({
       setAnalysingMessageIdx((prev) => (prev + 1) % ANALYSING_MESSAGES.length);
     }, 1800);
     return () => window.clearInterval(intervalId);
-  }, [doc.status]);
+  }, [doc, doc?.status]);
+
+  if (!doc) return null;
 
   return (
     <div className="app">
@@ -149,6 +157,23 @@ export default function AnalysisPageView({
               />
             )}
           </div>
+
+          {showFeedbackPanel && (
+            <section
+              className="analysis-feedback-standalone"
+              aria-labelledby={`analysis-feedback-heading-${doc.id}`}
+            >
+              <AnalysisFeedbackSection
+                doc={doc}
+                showTitle={false}
+                pageTitle={
+                  <h2 id={`analysis-feedback-heading-${doc.id}`} className="analysis-feedback-standalone__title">
+                    Feedback
+                  </h2>
+                }
+              />
+            </section>
+          )}
         </div>
       </div>
     </div>

@@ -109,6 +109,14 @@ export function normalizeGeminiAnalysis(raw) {
 
   const imageAnalysis = normalizeImageAnalysis(raw.imageAnalysis);
   const aiInsights = normalizeAiInsights(raw.aiInsights);
+  const fallbackAiInsights = !aiInsights && !imageAnalysis && summary
+    ? {
+        executiveSummary: summary,
+        insights: [],
+        limitations: [],
+        careCoordinationNotes: [],
+      }
+    : null;
 
   return {
     classification: { type, confidence: conf },
@@ -119,6 +127,7 @@ export function normalizeGeminiAnalysis(raw) {
     labValues,
     ...(imageAnalysis ? { imageAnalysis } : {}),
     ...(aiInsights ? { aiInsights } : {}),
+    ...(fallbackAiInsights ? { aiInsights: fallbackAiInsights } : {}),
     aiEnhanced: true,
     geminiGenerated: true,
   };
