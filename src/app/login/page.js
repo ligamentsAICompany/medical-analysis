@@ -174,7 +174,7 @@ export default function LoginPage() {
               </span>
             </h1>
             <p className="login-hero__lead">
-              Unified ingestion for documents and imaging — with Gemini-backed synthesis,
+              Unified ingestion for documents and imaging — with remote clinical analysis,
               glass dashboards, and audit-friendly flows built for modern care teams.
             </p>
 

@@ -4,14 +4,14 @@ import { useCallback, useState, useEffect } from 'react';
 import { extractTextFromPdf } from '../lib/pdfExtract';
 import { analyzeDocument } from '../lib/heuristics';
 import { parseLabValues } from '../lib/labParser';
-import { analyzeWithGemini } from '../lib/geminiClient';
-
-const MAX_GEMINI_TEXT_CHARS = 120_000;
 import {
   effectiveVisionMimeType,
   isGeminiVisionUpload,
   partitionClinicalBundle,
 } from '../lib/medicalFileTypes';
+import { analyzeWithBackend } from '../lib/analyzeClient';
+
+const MAX_ANALYZE_TEXT_CHARS = 120_000;
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -30,8 +30,8 @@ function fileToBase64(file) {
   });
 }
 
-function mergedLabValues(geminiAnalysis, text) {
-  if (geminiAnalysis.labValues?.length > 0) return geminiAnalysis.labValues;
+function mergedLabValues (analysisResult, text) {
+  if (analysisResult?.labValues?.length > 0) return analysisResult.labValues;
   return parseLabValues(text || '');
 }
 
@@ -46,26 +46,26 @@ export function useAnalysis({ updateDocument, addToast }) {
     setModelsReady(true);
   }, []);
 
-  const runGeminiAnalysis = useCallback(
+  const runStructuredTextAnalysis = useCallback(
     async (id, text, fileName) => {
       setAiLoadingId(id);
-      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
+      setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 });
       try {
-        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+        const { analysis: nextAnalysis } = await analyzeWithBackend({
           mode: 'text',
           text,
           filename: fileName || '',
         });
-        const labValues = mergedLabValues(geminiAnalysis, text);
+        const labValues = mergedLabValues(nextAnalysis, text);
         updateDocument(id, (doc) => ({
           analysis: {
-            ...geminiAnalysis,
+            ...nextAnalysis,
             labValues,
           },
         }));
       } catch (err) {
-        console.error('Gemini analysis failed', err);
-        addToast(err?.message || 'Gemini analysis failed', 'error');
+        console.error('Analyze API failed', err);
+        addToast(err?.message || 'Analysis failed', 'error');
         throw err;
       } finally {
         setAiLoadingId(null);
@@ -85,7 +85,7 @@ export function useAnalysis({ updateDocument, addToast }) {
         return
       }
       updateDocument(id, { status: 'analysing' })
-      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 })
+      setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 })
       try {
         const images = await Promise.all(
           visionFiles.map(async (file) => ({
@@ -94,7 +94,7 @@ export function useAnalysis({ updateDocument, addToast }) {
             filename: file.name,
           }))
         )
-        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+        const { analysis: nextAnalysis } = await analyzeWithBackend({
           mode: 'multiImage',
           images,
         })
@@ -103,8 +103,8 @@ export function useAnalysis({ updateDocument, addToast }) {
           status: 'ready',
           textContent: ocrHint,
           analysis: {
-            ...geminiAnalysis,
-            labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+            ...nextAnalysis,
+            labValues: nextAnalysis.labValues?.length ? nextAnalysis.labValues : [],
             multiImageCount: visionFiles.length,
           },
         })
@@ -129,7 +129,7 @@ export function useAnalysis({ updateDocument, addToast }) {
         return
       }
       updateDocument(id, { status: 'analysing' })
-      setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 })
+      setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 })
       try {
         const textBlocks = await Promise.all(
           textFiles.map(async (tf) => {
@@ -148,8 +148,8 @@ export function useAnalysis({ updateDocument, addToast }) {
             `[No extractable text from: ${textFiles.map((f) => f.name).join(', ')}. ` +
             'Use the attached imaging only; note missing clinical document context in limitations.]'
         }
-        if (combinedText.length > MAX_GEMINI_TEXT_CHARS) {
-          combinedText = combinedText.slice(0, MAX_GEMINI_TEXT_CHARS)
+        if (combinedText.length > MAX_ANALYZE_TEXT_CHARS) {
+          combinedText = combinedText.slice(0, MAX_ANALYZE_TEXT_CHARS)
         }
         const images = await Promise.all(
           visionFiles.map(async (file) => ({
@@ -159,7 +159,7 @@ export function useAnalysis({ updateDocument, addToast }) {
           }))
         )
         const textFilename = textFiles.map((f) => f.name).join('; ')
-        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+        const { analysis: nextAnalysis } = await analyzeWithBackend({
           mode: 'docAndImages',
           text: combinedText,
           textFilename,
@@ -169,8 +169,8 @@ export function useAnalysis({ updateDocument, addToast }) {
           status: 'ready',
           textContent: combinedText,
           analysis: {
-            ...geminiAnalysis,
-            labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+            ...nextAnalysis,
+            labValues: nextAnalysis.labValues?.length ? nextAnalysis.labValues : [],
             multiImageCount: visionFiles.length,
           },
         })
@@ -206,23 +206,23 @@ export function useAnalysis({ updateDocument, addToast }) {
       }
 
       if (isGeminiVisionUpload(file)) {
-        setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
+        setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 });
         try {
           const imageBase64 = await fileToBase64(file);
-          const { analysis: geminiAnalysis } = await analyzeWithGemini({
+          const { analysis: nextAnalysis } = await analyzeWithBackend({
             mode: 'image',
             mimeType: effectiveVisionMimeType(file),
             imageBase64,
             filename: file.name,
           });
-          console.log('[Gemini image] useAnalysis after upload — full analysis object', geminiAnalysis)
+          console.log('[analyze image] useAnalysis after upload', nextAnalysis)
           const ocrHint = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
           updateDocument(id, {
             status: 'ready',
             textContent: ocrHint,
             analysis: {
-              ...geminiAnalysis,
-              labValues: geminiAnalysis.labValues?.length ? geminiAnalysis.labValues : [],
+              ...nextAnalysis,
+              labValues: nextAnalysis.labValues?.length ? nextAnalysis.labValues : [],
             },
           });
         } catch (err) {
@@ -236,33 +236,33 @@ export function useAnalysis({ updateDocument, addToast }) {
       }
 
       try {
-        setAiLoadProgress({ file: 'Gemini', total: 1, loaded: 0 });
-        const { analysis: geminiAnalysis } = await analyzeWithGemini({
+        setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 });
+        const { analysis: nextAnalysis } = await analyzeWithBackend({
           mode: 'text',
           text,
           filename: file.name,
         });
-        const labValues = mergedLabValues(geminiAnalysis, text);
+        const labValues = mergedLabValues(nextAnalysis, text);
         updateDocument(id, {
           status: 'ready',
           textContent: text,
           analysis: {
-            ...geminiAnalysis,
+            ...nextAnalysis,
             labValues,
           },
         });
       } catch (err) {
-        console.error('Gemini document analysis failed', err);
+        console.error('Document analysis failed', err);
         const fallback = analyzeDocument(text || file.name);
         updateDocument(id, {
           status: 'ready',
           textContent: text || null,
           analysis: {
             ...fallback,
-            summary: `${fallback.summary}\n\n(Gemini unavailable: ${err?.message || 'unknown error'})`,
+            summary: `${fallback.summary}\n\n(Analysis API unavailable: ${err?.message || 'unknown error'})`,
           },
         });
-        addToast(err?.message || 'Used offline heuristics — check Gemini API key', 'warning');
+        addToast(err?.message || 'Used offline heuristics — check NEXT_PUBLIC_ANALYZE_API_BASE_URL', 'warning');
       } finally {
         setAiLoadProgress(null);
       }
@@ -273,13 +273,13 @@ export function useAnalysis({ updateDocument, addToast }) {
   const enhanceWithAI = useCallback(
     async (id, text, fileName = '') => {
       try {
-        await runGeminiAnalysis(id, text, fileName);
+        await runStructuredTextAnalysis(id, text, fileName);
         addToast('AI analysis complete', 'success');
       } catch {
-        /* error toast from runGeminiAnalysis */
+        /* error toast from runStructuredTextAnalysis */
       }
     },
-    [runGeminiAnalysis, addToast]
+    [runStructuredTextAnalysis, addToast]
   );
 
   const aiLoading = aiLoadingId !== null;

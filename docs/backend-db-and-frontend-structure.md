@@ -63,7 +63,7 @@ No frontend file paths here — only **contracts** the new API should expose:
 
 1. **Base URL** — e.g. `NEXT_PUBLIC_API_URL` on the client; server-side calls can use an internal URL.
 2. **Auth** — either **Bearer JWT** after login or **opaque session** validated per request; align CORS and `credentials` if cookies cross origins.
-3. **Analyze** — if you **move Gemini** out of Next: `POST /v1/analyze` (or similar) with the same payload ideas as today (`text` vs `image` mode, limits on body size); keep API keys only on this service.
+3. **Analyze** — the web app now calls a **remote analyze service** from the browser (`NEXT_PUBLIC_ANALYZE_API_BASE_URL`), typically `POST …/api/v1/analyze` with **`multipart/form-data`** and repeated **`files`** parts; see `src/config/analyzeApi.js` and `src/lib/analyzeClient.js` in the frontend repo.
 4. **Health** — `GET /health` or `/ready` for load balancers and k8s.
 
 ---
