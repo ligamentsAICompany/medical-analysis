@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { File, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { useMedDocs } from '../../context/MedDocsContext'
-import { DICOM_MIME, isDicomFile } from '../../lib/medicalFileTypes'
+import { DICOM_MIME, isDicomFile, isZipFile } from '../../lib/medicalFileTypes'
+import {
+  MAX_ANALYZE_FILE_BYTES,
+  maxAnalyzeFileLabel,
+} from '../../config/uploadLimits'
 
 const ACCEPT_FEEDBACK = [
   'application/pdf',
@@ -11,22 +15,26 @@ const ACCEPT_FEEDBACK = [
   'image/jpeg',
   'image/png',
   'image/webp',
+  'application/zip',
+  'application/x-zip-compressed',
   DICOM_MIME,
   'application/x-dicom',
 ]
 const MAX_FEEDBACK_FILES = 6
-const MAX_FEEDBACK_MB = 20
 
 let attachmentIdSeq = 1
 
 function validateFeedbackFile (file, addToast) {
-  const typeOk = (file.type && ACCEPT_FEEDBACK.includes(file.type)) || isDicomFile(file)
+  const typeOk =
+    (file.type && ACCEPT_FEEDBACK.includes(file.type)) ||
+    isDicomFile(file) ||
+    isZipFile(file)
   if (!typeOk) {
-    addToast(`${file.name}: type not allowed (PDF, TXT, images, DICOM .dcm)`, 'error')
+    addToast(`${file.name}: type not allowed (PDF, TXT, ZIP, images, DICOM .dcm)`, 'error')
     return false
   }
-  if (file.size > MAX_FEEDBACK_MB * 1024 * 1024) {
-    addToast(`${file.name}: exceeds ${MAX_FEEDBACK_MB} MB`, 'error')
+  if (file.size > MAX_ANALYZE_FILE_BYTES) {
+    addToast(`${file.name}: exceeds ${maxAnalyzeFileLabel}`, 'error')
     return false
   }
   return true
@@ -194,7 +202,7 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
         type="file"
         className="analysis-feedback__file-input"
         multiple
-        accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.dcm,.dicom,application/pdf,text/plain,image/jpeg,image/png,image/webp,application/dicom"
+        accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.zip,.dcm,.dicom,application/pdf,text/plain,image/jpeg,image/png,image/webp,application/zip,application/x-zip-compressed,application/dicom"
         aria-label="Attach files to feedback"
         onChange={handleFileChange}
       />
@@ -218,7 +226,7 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
       )}
 
       <span id={`analysis-feedback-attach-hint-${doc.id}`} className="sr-only">
-        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, JPEG, PNG, WebP, or DICOM (.dcm), up to {MAX_FEEDBACK_MB} megabytes each.
+        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, ZIP, JPEG, PNG, WebP, or DICOM (.dcm), up to {maxAnalyzeFileLabel} each.
       </span>
       <div className="analysis-feedback__textarea-wrap">
         <textarea

@@ -24,8 +24,22 @@ export function isGeminiVisionUpload (file) {
   return isDicomFile(file)
 }
 
+/** ZIP archive for batch upload (backend unpacks / analyzes). */
+export const ZIP_MIMES = ['application/zip', 'application/x-zip-compressed']
+
 /**
- * PDF or plain text — can be merged into one Gemini text block with imaging.
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {boolean}
+ */
+export function isZipFile (file) {
+  if (!file) return false
+  const t = (file.type || '').toLowerCase().trim()
+  if (ZIP_MIMES.includes(t)) return true
+  return (file.name || '').toLowerCase().endsWith('.zip')
+}
+
+/**
+ * PDF or plain text — documents merged with imaging in one analyze request.
  * @param {{ type?: string } | null | undefined} file
  * @returns {boolean}
  */
@@ -36,17 +50,43 @@ export function isTextBundleFile (file) {
 }
 
 /**
+ * Document-side files for a combined analyze request (not imaging).
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {boolean}
+ */
+export function isDocumentBundleFile (file) {
+  return isTextBundleFile(file) || isZipFile(file)
+}
+
+/**
+ * Any file type the workspace sends to the analyze API.
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {boolean}
+ */
+export function isAnalyzeUploadFile (file) {
+  if (!file) return false
+  return isGeminiVisionUpload(file) || isDocumentBundleFile(file)
+}
+
+/**
  * @param {Array<{ type?: string, name?: string }>} files
- * @returns {{ textFiles: typeof files, visionFiles: typeof files, isFullPartition: boolean }}
+ * @returns {{
+ *   textFiles: typeof files,
+ *   visionFiles: typeof files,
+ *   archiveFiles: typeof files,
+ *   isFullPartition: boolean
+ * }}
  */
 export function partitionClinicalBundle (files) {
   if (!files?.length) {
-    return { textFiles: [], visionFiles: [], isFullPartition: true }
+    return { textFiles: [], visionFiles: [], archiveFiles: [], isFullPartition: true }
   }
   const textFiles = files.filter((f) => isTextBundleFile(f))
   const visionFiles = files.filter((f) => isGeminiVisionUpload(f))
-  const isFullPartition = textFiles.length + visionFiles.length === files.length
-  return { textFiles, visionFiles, isFullPartition }
+  const archiveFiles = files.filter((f) => isZipFile(f))
+  const isFullPartition =
+    textFiles.length + visionFiles.length + archiveFiles.length === files.length
+  return { textFiles, visionFiles, archiveFiles, isFullPartition }
 }
 
 /**

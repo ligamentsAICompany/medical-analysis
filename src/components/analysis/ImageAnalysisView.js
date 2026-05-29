@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
-import { isDicomFile, isGeminiVisionUpload, isTextBundleFile } from '../../lib/medicalFileTypes';
+import { isDicomFile, isGeminiVisionUpload, isTextBundleFile, isZipFile } from '../../lib/medicalFileTypes';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -136,6 +136,7 @@ function MultiImageStrip ({ doc, previewIndex, onSelectPreview }) {
       {urls.map((src, i) => {
         const sliceFile = doc.bundleFiles?.[i]
         const sliceIsDicom = sliceFile ? isDicomFile(sliceFile) : false
+        const sliceIsZip = sliceFile ? isZipFile(sliceFile) : false
         const sliceIsDoc = sliceFile ? isTextBundleFile(sliceFile) : false
         const selected = i === previewIndex
         return (
@@ -154,6 +155,10 @@ function MultiImageStrip ({ doc, previewIndex, onSelectPreview }) {
                 role="presentation"
               >
                 <span className="img-multi-strip__dicom-label">DICOM</span>
+              </div>
+            ) : sliceIsZip ? (
+              <div className="img-multi-strip__doc" role="presentation">
+                <span className="img-multi-strip__doc-label">ZIP</span>
               </div>
             ) : sliceIsDoc ? (
               <div className="img-multi-strip__doc" role="presentation">
@@ -226,6 +231,7 @@ function ImagePanel ({ doc }) {
     ? isSliceDicomAtIndex(doc, previewIndex)
     : isPrimarySliceDicom(doc)
   const mainIsDoc = Boolean(sliceFile && isTextBundleFile(sliceFile))
+  const mainIsZip = Boolean(sliceFile && isZipFile(sliceFile))
 
   return (
     <div className="img-preview-panel img-preview-panel--below-report">
@@ -234,7 +240,17 @@ function ImagePanel ({ doc }) {
         previewIndex={previewIndex}
         onSelectPreview={handleSelectPreview}
       />
-      {mainIsDoc ? (
+      {mainIsZip ? (
+        <div
+          className="img-preview-panel__doc-placeholder"
+          role="note"
+          aria-label="ZIP archive preview"
+        >
+          <p className="img-preview-panel__doc-placeholder-text">
+            ZIP archive — contents are analysed by the backend. Download from the workspace to inspect the archive locally.
+          </p>
+        </div>
+      ) : mainIsDoc ? (
         <div
           className="img-preview-panel__doc-placeholder"
           role="note"

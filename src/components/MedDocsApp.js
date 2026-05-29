@@ -10,10 +10,14 @@ import Toast from './Toast';
 import { AppHeader } from './AppHeader';
 import { useMedDocs } from '../context/MedDocsContext';
 import {
+  isAnalyzeUploadFile,
+  isDocumentBundleFile,
   isGeminiVisionUpload,
-  isTextBundleFile,
-  partitionClinicalBundle,
 } from '../lib/medicalFileTypes';
+import {
+  MAX_DOCUMENT_FILES_PER_REQUEST,
+  MAX_VISION_FILES_PER_REQUEST,
+} from '../config/uploadLimits';
 
 const SAMPLE_IMAGES = [
   {
@@ -45,8 +49,7 @@ export default function MedDocsApp() {
     toasts, addToast, removeToast,
     documents, addDocument, addImageBundle, deleteDocument,
     analyzeFile,
-    analyzeImageBundle,
-    analyzeMixedMediaBundle,
+    analyzeFileBundle,
   } = useMedDocs();
 
   const [viewerDoc, setViewerDoc] = useState(null);
@@ -73,63 +76,33 @@ export default function MedDocsApp() {
   const handleFiles = useCallback(
     (fileList) => {
       const raw = [...fileList]
-      const MAX_VISION = 8
-      const MAX_TEXT_FILES = 6
       let vSeen = 0
-      let tSeen = 0
+      let dSeen = 0
       const arr = raw.filter((f) => {
+        if (!isAnalyzeUploadFile(f)) return false
         if (isGeminiVisionUpload(f)) {
-          if (vSeen >= MAX_VISION) return false
+          if (vSeen >= MAX_VISION_FILES_PER_REQUEST) return false
           vSeen += 1
           return true
         }
-        if (isTextBundleFile(f)) {
-          if (tSeen >= MAX_TEXT_FILES) return false
-          tSeen += 1
+        if (isDocumentBundleFile(f)) {
+          if (dSeen >= MAX_DOCUMENT_FILES_PER_REQUEST) return false
+          dSeen += 1
           return true
         }
         return false
       })
       if (arr.length < raw.length) {
         addToast(
-          'Some files were skipped (only PDF/TXT plus images or DICOM can be combined; max 8 imaging files and 6 documents per request).',
+          `Some files were skipped (max ${MAX_VISION_FILES_PER_REQUEST} imaging and ${MAX_DOCUMENT_FILES_PER_REQUEST} document/ZIP files per request).`,
           'warning',
           6000
         )
       }
-      const { textFiles, visionFiles, isFullPartition } = partitionClinicalBundle(arr)
-      const mixedPatientBundle =
-        arr.length >= 2 &&
-        isFullPartition &&
-        textFiles.length >= 1 &&
-        visionFiles.length >= 1
 
-      const allVisionBundle =
-        arr.length >= 2 && arr.every((f) => isGeminiVisionUpload(f))
-
-      if (mixedPatientBundle) {
+      if (arr.length >= 2) {
         const id = addImageBundle(arr)
-        setTimeout(() => analyzeMixedMediaBundle(id, arr), 50)
-        router.push(`/analysis/${id}`)
-        addToast(
-          `Analysing ${textFiles.length} document(s) with ${visionFiles.length} imaging file(s) as one patient report…`,
-          'info',
-          4500
-        )
-        return
-      }
-
-      if (allVisionBundle) {
-        if (arr.length > MAX_VISION) {
-          addToast(
-            `Using first ${MAX_VISION} files for one combined report (${arr.length} were selected).`,
-            'warning',
-            5000
-          )
-          arr.splice(MAX_VISION)
-        }
-        const id = addImageBundle(arr)
-        setTimeout(() => analyzeImageBundle(id, arr), 50)
+        setTimeout(() => analyzeFileBundle(id, arr), 50)
         router.push(`/analysis/${id}`)
         addToast(
           `Analysing ${arr.length} files together for one clinical report…`,
@@ -138,21 +111,14 @@ export default function MedDocsApp() {
         )
         return
       }
+
       arr.forEach((file, idx) => {
         const id = addDocument(file)
         setTimeout(() => analyzeFile(id, file), 50)
         if (idx === 0) router.push(`/analysis/${id}`)
       })
     },
-    [
-      addDocument,
-      addImageBundle,
-      addToast,
-      analyzeFile,
-      analyzeImageBundle,
-      analyzeMixedMediaBundle,
-      router,
-    ]
+    [addDocument, addImageBundle, addToast, analyzeFile, analyzeFileBundle, router]
   )
 
   const handleDelete = useCallback((id) => {
