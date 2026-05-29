@@ -16,6 +16,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 DOCKERFILE="${DOCKERFILE:-Dockerfile}"
 
 IMAGE="gcr.io/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
+ANALYZE_API_BASE_URL="${ANALYZE_API_BASE_URL:-https://medical-analysis-backend-2p3fwh332a-uc.a.run.app}"
 SKIP_AUTH=false
 
 for arg in "$@"; do
@@ -41,6 +42,7 @@ echo "→ Project:  ${PROJECT_ID}"
 echo "→ Region:   ${REGION}"
 echo "→ Service:  ${SERVICE_NAME}"
 echo "→ Image:    ${IMAGE}"
+echo "→ Analyze:  ${ANALYZE_API_BASE_URL}/api/v1/analyze"
 echo ""
 
 if [[ "$SKIP_AUTH" == false ]]; then
@@ -56,6 +58,7 @@ docker buildx build \
   --platform linux/amd64 \
   -t "$IMAGE" \
   -f "$DOCKERFILE" \
+  --build-arg "NEXT_PUBLIC_ANALYZE_API_BASE_URL=${ANALYZE_API_BASE_URL}" \
   --push \
   .
 

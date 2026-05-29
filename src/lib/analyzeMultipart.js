@@ -1,9 +1,5 @@
-import {
-  MAX_ANALYZE_FILE_BYTES,
-  MAX_ANALYZE_FILE_MB,
-  MAX_ANALYZE_TEXT_CHARS,
-} from '../config/uploadLimits';
-import { isAnalyzeUploadFile } from './medicalFileTypes';
+import { MAX_ANALYZE_TEXT_CHARS } from '../config/uploadLimits';
+import { validateAnalyzeFile, validateAnalyzeFileSelection } from './medicalFileTypes';
 
 /**
  * @param {File[]} files
@@ -12,12 +8,14 @@ export function assertAnalyzeFiles (files) {
   if (!files?.length) {
     throw new Error('No files to analyze');
   }
+  const selection = validateAnalyzeFileSelection(files);
+  if (!selection.ok) {
+    throw new Error(selection.error);
+  }
   for (const file of files) {
-    if (!isAnalyzeUploadFile(file)) {
-      throw new Error(`${file.name}: unsupported file type for analysis`);
-    }
-    if (file.size > MAX_ANALYZE_FILE_BYTES) {
-      throw new Error(`${file.name}: exceeds ${MAX_ANALYZE_FILE_MB} MB`);
+    const result = validateAnalyzeFile(file);
+    if (!result.ok) {
+      throw new Error(result.error);
     }
   }
 }

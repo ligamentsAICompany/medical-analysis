@@ -13,6 +13,7 @@ import {
   isAnalyzeUploadFile,
   isDocumentBundleFile,
   isGeminiVisionUpload,
+  validateAnalyzeFileSelection,
 } from '../lib/medicalFileTypes';
 import {
   MAX_DOCUMENT_FILES_PER_REQUEST,
@@ -76,6 +77,14 @@ export default function MedDocsApp() {
   const handleFiles = useCallback(
     (fileList) => {
       const raw = [...fileList]
+      if (!raw.length) return
+
+      const selection = validateAnalyzeFileSelection(raw)
+      if (!selection.ok) {
+        addToast(selection.error, 'error')
+        return
+      }
+
       let vSeen = 0
       let dSeen = 0
       const arr = raw.filter((f) => {

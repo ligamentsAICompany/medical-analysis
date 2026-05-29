@@ -2,10 +2,10 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileText } from 'lucide-react';
-import { DICOM_MIME, isAnalyzeUploadFile, isDicomFile, isZipFile } from '../lib/medicalFileTypes';
+import { DICOM_MIME, isDicomFile, isZipFile, validateAnalyzeFile, validateAnalyzeFileSelection } from '../lib/medicalFileTypes';
 import {
-  MAX_ANALYZE_FILE_BYTES,
   maxAnalyzeFileLabel,
+  maxZipFileLabel,
 } from '../config/uploadLimits';
 
 const ACCEPTED = [
@@ -29,12 +29,9 @@ function validate (file, addToast) {
     addToast(`${file.name}: unsupported file type`, 'error');
     return false;
   }
-  if (!isAnalyzeUploadFile(file)) {
-    addToast(`${file.name}: unsupported file type`, 'error');
-    return false;
-  }
-  if (file.size > MAX_ANALYZE_FILE_BYTES) {
-    addToast(`${file.name}: exceeds ${maxAnalyzeFileLabel} limit`, 'error');
+  const result = validateAnalyzeFile(file);
+  if (!result.ok) {
+    addToast(result.error, 'error');
     return false;
   }
   return true;
@@ -45,7 +42,16 @@ export default function UploadZone ({ onFiles, addToast }) {
   const [dragging, setDragging] = useState(false);
 
   const handleFiles = useCallback((files) => {
-    const valid = [...files].filter((f) => validate(f, addToast));
+    const incoming = [...files];
+    if (!incoming.length) return;
+
+    const selection = validateAnalyzeFileSelection(incoming);
+    if (!selection.ok) {
+      addToast(selection.error, 'error');
+      return;
+    }
+
+    const valid = incoming.filter((f) => validate(f, addToast));
     if (valid.length) onFiles(valid);
   }, [onFiles, addToast]);
 
@@ -87,7 +93,7 @@ export default function UploadZone ({ onFiles, addToast }) {
       </p>
       <p className="upload-zone__sub">
         <FileText size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-        PDF, TXT, ZIP, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. Drop several files together for one combined report (up to 8 imaging + 6 documents per request).
+        PDF, TXT, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. ZIP archives — max {maxZipFileLabel}, one ZIP only (no mixed uploads). Drop several non-ZIP files together for one combined report (up to 8 imaging + 6 documents per request).
       </p>
     </div>
   );

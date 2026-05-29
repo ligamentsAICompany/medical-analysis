@@ -1,7 +1,13 @@
 /**
  * Remote medical analysis API (Cloud Run / team backend).
  * Used by the browser client — only `NEXT_PUBLIC_*` vars are available here.
+ *
+ * Full endpoint: POST {base}/api/v1/analyze (multipart field `files`)
  */
+
+/** Production default when NEXT_PUBLIC_ANALYZE_API_BASE_URL is unset at build time. */
+export const DEFAULT_ANALYZE_API_BASE_URL =
+  'https://medical-analysis-backend-2p3fwh332a-uc.a.run.app'
 
 /** Path appended to {@link getAnalyzeApiBaseUrl} for multipart analyze. */
 export const ANALYZE_API_PATH = '/api/v1/analyze'
@@ -10,12 +16,9 @@ export const ANALYZE_API_PATH = '/api/v1/analyze'
  * @returns {string} Origin + optional path prefix, no trailing slash (e.g. https://….run.app)
  */
 export function getAnalyzeApiBaseUrl () {
-  const raw = process.env.NEXT_PUBLIC_ANALYZE_API_BASE_URL?.trim()
-  if (!raw) {
-    throw new Error(
-      'NEXT_PUBLIC_ANALYZE_API_BASE_URL is not set. Add it to .env (see .env.example).'
-    )
-  }
+  const raw =
+    process.env.NEXT_PUBLIC_ANALYZE_API_BASE_URL?.trim() ||
+    DEFAULT_ANALYZE_API_BASE_URL
   return raw.replace(/\/+$/, '')
 }
 

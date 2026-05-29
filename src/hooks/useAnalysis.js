@@ -9,6 +9,7 @@ import {
   isGeminiVisionUpload,
   isTextBundleFile,
   isZipFile,
+  validateAnalyzeFileSelection,
 } from '../lib/medicalFileTypes';
 import { analyzeFilesWithBackend, analyzeTextWithBackend } from '../lib/analyzeClient';
 
@@ -83,6 +84,12 @@ export function useAnalysis ({ updateDocument, addToast }) {
   const analyzeFileBundle = useCallback(
     async (id, files) => {
       if (!files?.length || files.length < 2) return;
+      const selection = validateAnalyzeFileSelection(files);
+      if (!selection.ok) {
+        updateDocument(id, { status: 'error' });
+        addToast(selection.error, 'error');
+        return;
+      }
       if (!files.every((f) => isAnalyzeUploadFile(f))) {
         updateDocument(id, { status: 'error' });
         addToast('Combined upload contains unsupported file types', 'error');

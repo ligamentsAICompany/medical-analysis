@@ -3,6 +3,11 @@ export const MAX_ANALYZE_FILE_MB = 100
 
 export const MAX_ANALYZE_FILE_BYTES = MAX_ANALYZE_FILE_MB * 1024 * 1024
 
+/** ZIP-only uploads — backend unpacks archives up to this size. */
+export const MAX_ZIP_FILE_MB = 500
+
+export const MAX_ZIP_FILE_BYTES = MAX_ZIP_FILE_MB * 1024 * 1024
+
 /** Max imaging files (images + DICOM) in one combined analyze request. */
 export const MAX_VISION_FILES_PER_REQUEST = 8
 
@@ -13,3 +18,5 @@ export const MAX_DOCUMENT_FILES_PER_REQUEST = 6
 export const MAX_ANALYZE_TEXT_CHARS = 120_000
 
 export const maxAnalyzeFileLabel = `${MAX_ANALYZE_FILE_MB} MB`
+
+export const maxZipFileLabel = `${MAX_ZIP_FILE_MB} MB`

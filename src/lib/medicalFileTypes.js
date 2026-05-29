@@ -1,3 +1,10 @@
+import {
+  MAX_ANALYZE_FILE_BYTES,
+  MAX_ZIP_FILE_BYTES,
+  maxAnalyzeFileLabel,
+  maxZipFileLabel,
+} from '../config/uploadLimits'
+
 /** IANA type for DICOM Part 10 / P10 objects (.dcm). */
 export const DICOM_MIME = 'application/dicom'
 
@@ -66,6 +73,68 @@ export function isDocumentBundleFile (file) {
 export function isAnalyzeUploadFile (file) {
   if (!file) return false
   return isGeminiVisionUpload(file) || isDocumentBundleFile(file)
+}
+
+/**
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {number}
+ */
+export function getMaxAnalyzeFileBytes (file) {
+  return isZipFile(file) ? MAX_ZIP_FILE_BYTES : MAX_ANALYZE_FILE_BYTES
+}
+
+/**
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {string}
+ */
+export function maxAnalyzeFileLabelFor (file) {
+  return isZipFile(file) ? maxZipFileLabel : maxAnalyzeFileLabel
+}
+
+/**
+ * ZIP archives must be the sole file in a selection (no mixing with PDF, images, etc.).
+ * @param {Array<{ type?: string, name?: string }>} files
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function validateAnalyzeFileSelection (files) {
+  if (!files?.length) {
+    return { ok: false, error: 'No files selected' }
+  }
+  const archiveFiles = files.filter((f) => isZipFile(f))
+  if (archiveFiles.length === 0) {
+    return { ok: true }
+  }
+  if (archiveFiles.length > 1) {
+    return { ok: false, error: 'Upload one ZIP archive at a time.' }
+  }
+  if (files.length > 1) {
+    return {
+      ok: false,
+      error: 'ZIP archives must be uploaded alone — remove other files from this selection.',
+    }
+  }
+  return { ok: true }
+}
+
+/**
+ * @param {{ type?: string, name?: string, size?: number } | null | undefined} file
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function validateAnalyzeFile (file) {
+  if (!file) {
+    return { ok: false, error: 'No file selected' }
+  }
+  if (!isAnalyzeUploadFile(file)) {
+    return { ok: false, error: `${file.name}: unsupported file type` }
+  }
+  const maxBytes = getMaxAnalyzeFileBytes(file)
+  if (file.size > maxBytes) {
+    return {
+      ok: false,
+      error: `${file.name}: exceeds ${maxAnalyzeFileLabelFor(file)} limit`,
+    }
+  }
+  return { ok: true }
 }
 
 /**

@@ -3,10 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { File, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { useMedDocs } from '../../context/MedDocsContext'
-import { DICOM_MIME, isDicomFile, isZipFile } from '../../lib/medicalFileTypes'
+import { DICOM_MIME, isDicomFile, isZipFile, validateAnalyzeFile } from '../../lib/medicalFileTypes'
 import {
-  MAX_ANALYZE_FILE_BYTES,
   maxAnalyzeFileLabel,
+  maxZipFileLabel,
 } from '../../config/uploadLimits'
 
 const ACCEPT_FEEDBACK = [
@@ -33,8 +33,9 @@ function validateFeedbackFile (file, addToast) {
     addToast(`${file.name}: type not allowed (PDF, TXT, ZIP, images, DICOM .dcm)`, 'error')
     return false
   }
-  if (file.size > MAX_ANALYZE_FILE_BYTES) {
-    addToast(`${file.name}: exceeds ${maxAnalyzeFileLabel}`, 'error')
+  const result = validateAnalyzeFile(file)
+  if (!result.ok) {
+    addToast(result.error, 'error')
     return false
   }
   return true
@@ -226,7 +227,7 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
       )}
 
       <span id={`analysis-feedback-attach-hint-${doc.id}`} className="sr-only">
-        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, ZIP, JPEG, PNG, WebP, or DICOM (.dcm), up to {maxAnalyzeFileLabel} each.
+        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, ZIP, JPEG, PNG, WebP, or DICOM (.dcm). Most files up to {maxAnalyzeFileLabel}; ZIP up to {maxZipFileLabel}.
       </span>
       <div className="analysis-feedback__textarea-wrap">
         <textarea
