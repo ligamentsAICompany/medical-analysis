@@ -8,6 +8,16 @@ export const MAX_ZIP_FILE_MB = 500
 
 export const MAX_ZIP_FILE_BYTES = MAX_ZIP_FILE_MB * 1024 * 1024
 
+/**
+ * Cloud Run's HTTP body limit is ~32 MB.
+ * Files at or above this threshold must go through the GCS signed-URL flow
+ * (POST /api/v1/upload-url → PUT GCS → POST /api/v1/analyze-gcs)
+ * instead of the direct POST /api/v1/analyze path.
+ */
+export const LARGE_FILE_THRESHOLD_MB = 30
+
+export const LARGE_FILE_THRESHOLD_BYTES = LARGE_FILE_THRESHOLD_MB * 1024 * 1024
+
 /** Max imaging files (images + DICOM) in one combined analyze request. */
 export const MAX_VISION_FILES_PER_REQUEST = 8
 

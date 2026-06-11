@@ -100,7 +100,21 @@ export function useAnalysis ({ updateDocument, addToast }) {
       try {
         const textBlocks = await Promise.all(files.map((f) => optionalExtractedText(f)));
         const textContent = textBlocks.filter(Boolean).join(' · ');
-        const { analysis: nextAnalysis } = await analyzeFilesWithBackend(files);
+        const { analysis: nextAnalysis } = await analyzeFilesWithBackend(
+          files,
+          (phase, pct) => {
+            if (phase === 'uploading') {
+              setAiLoadProgress({
+                file: files[0]?.name || 'archive',
+                total: 100,
+                loaded: pct,
+                phase: 'uploading',
+              });
+            } else {
+              setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0, phase: 'analyzing' });
+            }
+          }
+        );
         const visionCount = files.filter((f) => isGeminiVisionUpload(f)).length;
         updateDocument(id, {
           status: 'ready',
@@ -150,7 +164,21 @@ export function useAnalysis ({ updateDocument, addToast }) {
 
       setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 });
       try {
-        const { analysis: nextAnalysis } = await analyzeFilesWithBackend([file]);
+        const { analysis: nextAnalysis } = await analyzeFilesWithBackend(
+          [file],
+          (phase, pct) => {
+            if (phase === 'uploading') {
+              setAiLoadProgress({
+                file: file.name,
+                total: 100,
+                loaded: pct,
+                phase: 'uploading',
+              });
+            } else {
+              setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0, phase: 'analyzing' });
+            }
+          }
+        );
         const labValues = mergedLabValues(nextAnalysis, text);
         updateDocument(id, {
           status: 'ready',

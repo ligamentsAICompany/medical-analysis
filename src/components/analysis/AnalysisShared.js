@@ -223,13 +223,21 @@ export function AiProgressBar({ aiLoadProgress }) {
   const pct = aiLoadProgress?.total
     ? Math.round((aiLoadProgress.loaded / aiLoadProgress.total) * 100)
     : null;
+
+  const isUploading = aiLoadProgress?.phase === 'uploading';
+  const label = isUploading
+    ? `Uploading to cloud… ${pct != null ? `${pct}%` : ''}`
+    : aiLoadProgress?.phase === 'analyzing'
+      ? 'AI analysis in progress…'
+      : aiLoadProgress?.file
+        ? `Loading ${aiLoadProgress.file}…`
+        : 'Running AI analysis…';
+
   return (
     <div className="ai-inline-progress">
       <Loader size={13} className="spin" />
       <div className="ai-inline-progress__right">
-        <span className="ai-inline-progress__label">
-          {aiLoadProgress?.file ? `Loading ${aiLoadProgress.file}…` : 'Running AI analysis…'}
-        </span>
+        <span className="ai-inline-progress__label">{label}</span>
         {pct !== null && (
           <div className="ai-progress__bar" style={{ marginTop: 4 }}>
             <div className="ai-progress__fill" style={{ width: `${pct}%` }} />
