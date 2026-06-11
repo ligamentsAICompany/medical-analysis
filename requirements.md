@@ -43,7 +43,7 @@ A browser-only medical document management app. All AI inference runs client-sid
 
 | # | Story | Status |
 |---|-------|--------|
-| 1 | Drag-and-drop or browse to upload PDF/image | ✅ Done |
+| 1 | Drag-and-drop or browse to upload PDF/TXT/DOCX/image/DICOM/ZIP | ✅ Done |
 | 2 | See all documents in a table | ✅ Done |
 | 3 | Open analysis per document (dedicated page) | ✅ Done |
 | 4 | View original PDF in-browser | ✅ Done |
@@ -62,8 +62,8 @@ A browser-only medical document management app. All AI inference runs client-sid
 
 - [x] Drag-and-drop area at the top of the page
 - [x] Fallback "Browse files" button
-- [x] Accepted: `.pdf`, `.txt`, `.jpg`, `.jpeg`, `.png`
-- [x] Max 20 MB per file — error toast for oversized or unsupported files
+- [x] Accepted: `.pdf`, `.txt`, `.docx`, `.jpg`, `.jpeg`, `.png`, `.webp`, `.dcm`, `.dicom`, `.zip`
+- [x] Max 100 MB per non-ZIP file and 500 MB per ZIP — error toast for oversized or unsupported files
 - [x] Multiple files at once
 - [x] Analysis pipeline auto-triggered on upload
 - [x] Analysis panel auto-opens for the first uploaded file
@@ -209,7 +209,7 @@ A browser-only medical document management app. All AI inference runs client-sid
 
 ## Acceptance Criteria
 
-- [x] File upload accepts PDF/image via drag-and-drop and file browser
+- [x] File upload accepts PDF/TXT/DOCX/image/DICOM/ZIP via drag-and-drop and file browser
 - [x] Each upload appears as a row immediately (status: Analysing)
 - [x] Analysis page opens automatically on upload
 - [x] Row status updates to "Ready" when analysis completes

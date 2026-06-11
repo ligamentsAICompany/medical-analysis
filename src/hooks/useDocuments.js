@@ -45,7 +45,7 @@ export function useDocuments() {
 
   /**
    * Several files → one document, one combined AI analysis.
-   * Vision-only: multiple images/DICOM. Mixed: PDF/TXT + imaging (same patient).
+   * Vision-only: multiple images/DICOM. Mixed: PDF/TXT/DOCX + imaging (same patient).
    */
   const addImageBundle = useCallback((files) => {
     const id = `doc-${Date.now()}-${nextId++}`;

@@ -21,7 +21,7 @@ export const LARGE_FILE_THRESHOLD_BYTES = LARGE_FILE_THRESHOLD_MB * 1024 * 1024
 /** Max imaging files (images + DICOM) in one combined analyze request. */
 export const MAX_VISION_FILES_PER_REQUEST = 8
 
-/** Max document files (PDF, TXT, ZIP) in one combined analyze request. */
+/** Max document files (PDF, TXT, DOCX, ZIP) in one combined analyze request. */
 export const MAX_DOCUMENT_FILES_PER_REQUEST = 6
 
 /** Text-only re-analysis (enhance) — character cap for extracted body. */

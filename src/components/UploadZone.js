@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileText } from 'lucide-react';
-import { DICOM_MIME, isDicomFile, isZipFile, validateAnalyzeFile, validateAnalyzeFileSelection } from '../lib/medicalFileTypes';
+import { DICOM_MIME, DOCX_MIME, isDicomFile, isDocxFile, isZipFile, validateAnalyzeFile, validateAnalyzeFileSelection } from '../lib/medicalFileTypes';
 import {
   maxAnalyzeFileLabel,
   maxZipFileLabel,
@@ -11,6 +11,7 @@ import {
 const ACCEPTED = [
   'application/pdf',
   'text/plain',
+  DOCX_MIME,
   'image/jpeg',
   'image/png',
   'image/webp',
@@ -23,6 +24,7 @@ const ACCEPTED = [
 function validate (file, addToast) {
   const typeOk =
     (file.type && ACCEPTED.includes(file.type)) ||
+    isDocxFile(file) ||
     isDicomFile(file) ||
     isZipFile(file);
   if (!typeOk) {
@@ -81,7 +83,7 @@ export default function UploadZone ({ onFiles, addToast }) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.zip,.dcm,.dicom,application/pdf,text/plain,image/*,application/zip,application/x-zip-compressed,application/dicom"
+        accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp,.zip,.dcm,.dicom,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/zip,application/x-zip-compressed,application/dicom"
         className="upload-zone__input"
         onChange={onInputChange}
       />
@@ -93,7 +95,7 @@ export default function UploadZone ({ onFiles, addToast }) {
       </p>
       <p className="upload-zone__sub">
         <FileText size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-        PDF, TXT, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. ZIP archives — max {maxZipFileLabel}, one ZIP only (no mixed uploads). Drop several non-ZIP files together for one combined report (up to 8 imaging + 6 documents per request).
+        PDF, TXT, DOCX, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. ZIP archives — max {maxZipFileLabel}, one ZIP only (no mixed uploads). Drop several non-ZIP files together for one combined report (up to 8 imaging + 6 documents per request).
       </p>
     </div>
   );

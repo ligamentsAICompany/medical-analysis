@@ -8,6 +8,20 @@ import {
 /** IANA type for DICOM Part 10 / P10 objects (.dcm). */
 export const DICOM_MIME = 'application/dicom'
 
+/** Office Open XML Word document (.docx). */
+export const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+/**
+ * @param {{ type?: string, name?: string } | null | undefined} file
+ * @returns {boolean}
+ */
+export function isDocxFile (file) {
+  if (!file) return false
+  const t = (file.type || '').toLowerCase().trim()
+  if (t === DOCX_MIME) return true
+  return (file.name || '').toLowerCase().endsWith('.docx')
+}
+
 /**
  * @param {{ type?: string, name?: string } | null | undefined} file
  * @returns {boolean}
@@ -46,14 +60,14 @@ export function isZipFile (file) {
 }
 
 /**
- * PDF or plain text — documents merged with imaging in one analyze request.
- * @param {{ type?: string } | null | undefined} file
+ * PDF, DOCX, or plain text — documents merged with imaging in one analyze request.
+ * @param {{ type?: string, name?: string } | null | undefined} file
  * @returns {boolean}
  */
 export function isTextBundleFile (file) {
   if (!file) return false
   const t = (file.type || '').toLowerCase()
-  return t === 'application/pdf' || t === 'text/plain'
+  return t === 'application/pdf' || t === 'text/plain' || isDocxFile(file)
 }
 
 /**

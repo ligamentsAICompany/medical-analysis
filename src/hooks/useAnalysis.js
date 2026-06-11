@@ -6,6 +6,7 @@ import { analyzeDocument } from '../lib/heuristics';
 import { parseLabValues } from '../lib/labParser';
 import {
   isAnalyzeUploadFile,
+  isDocxFile,
   isGeminiVisionUpload,
   isTextBundleFile,
   isZipFile,
@@ -32,6 +33,9 @@ async function optionalExtractedText (file) {
     } catch {
       return '';
     }
+  }
+  if (isDocxFile(file)) {
+    return `[DOCX document: ${file.name}]`;
   }
   if (isZipFile(file)) {
     return `[ZIP archive: ${file.name}]`;

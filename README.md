@@ -7,7 +7,7 @@ A browser-based medical document upload and AI analysis tool built with **Next.j
 ## Features
 
 ### Document Management
-- Drag-and-drop or click-to-browse upload (PDF, TXT, JPG, PNG — max 20 MB)
+- Drag-and-drop or click-to-browse upload (PDF, TXT, DOCX, JPG, PNG, WebP, DICOM, ZIP — max 100 MB per non-ZIP file)
 - Document table with sortable columns: file name, type, patient, size, upload date, status
 - Search by file name or patient name; filter by document type
 - Delete documents; view raw PDF in-browser
@@ -138,7 +138,7 @@ node scripts/generate-samples.js
 ### Analysis flow
 1. File dropped → `addDocument()` creates record + `objectUrl`
 2. Analysis panel opens immediately (shows skeleton)
-3. `analyzeFile()` extracts text (PDF → pdfjs, text → FileReader, image → filename)
+3. `analyzeFile()` extracts text (PDF → pdfjs, text → FileReader; DOCX, image, DICOM, and ZIP uploads are sent to the analyze API as files)
 4. Heuristic analysis runs synchronously: classify → NER → metrics → lab values → summary
 5. Document status → `ready`; panel populates with heuristic results
 6. `runAiEnhance()` called automatically → Transformers.js models refine classification, entities, summary

@@ -43,8 +43,8 @@ This document describes how the **MedDocs** Next.js frontend is organized and wh
 | **Text / PDF-extracted text** | `useAnalysis.js` → `analyzeClient.js` builds `multipart/form-data` with a `.txt` part under field name **`files`**, same as imaging uploads. |
 | **Images / DICOM** | Base64 on the client → `Blob` parts, each appended as **`files`** (repeated field), matching `curl -F 'files=@…'`. |
 | **Multiple images (same study)** | One document, `mode: 'multiImage'` → several **`files`** parts in one POST to `getAnalyzeApiUrl()`. |
-| **PDF + imaging (same patient)** | `mode: 'docAndImages'` — imaging **`files`** first, then `extracted-context.txt` as **`files`**. |
-| **User feedback on analysis** | On `/analysis/[docId]`, a **standalone Feedback section** below the report offers thumbs up/down, optional comment, and **optional file attachments** (PDF/TXT/images, capped count/size). Stored as `userFeedback` including `attachments[]` with `objectUrl` + `file` refs (client session only until a backend exists). |
+| **Document + imaging (same patient)** | PDF/TXT/DOCX files can be combined with imaging/DICOM files in one multipart analyze request. |
+| **User feedback on analysis** | On `/analysis/[docId]`, a **standalone Feedback section** below the report offers thumbs up/down, optional comment, and **optional file attachments** (PDF/TXT/DOCX/images/DICOM/ZIP, capped count/size). Stored as `userFeedback` including `attachments[]` with `objectUrl` + `file` refs (client session only until a backend exists). |
 | Consistent schema for UI | `src/lib/geminiNormalize.js` normalises whatever JSON the analyze API returns (expects the same MedDocs analysis shape, or `{ analysis: { … } }`). |
 | Lab values | Prefer API output; merge with `labParser.js` on extracted text when useful (`mergedLabValues` in `useAnalysis.js`). |
 | Failure handling (text) | On API error: **heuristic fallback** via `heuristics.js` / `analyzeDocument`, user warned with toast. |
@@ -174,7 +174,7 @@ src/lib/
 
 1. User selects files → `addDocument` creates an in-memory record (id, file, object URL, status).
 2. First file navigates to `/analysis/{id}`.
-3. `analyzeFile`: set status **analysing**; extract text for PDF/text; for **images**, skip text pipeline and POST multipart **files** to the analyze API; for **text/PDF**, POST extracted text as a **files** `.txt` part (on error, heuristic fallback for text path).
+3. `analyzeFile`: set status **analysing**; extract text for PDF/text; for **DOCX/images/DICOM/ZIP**, POST multipart **files** to the analyze API; for **text/PDF**, include extracted text in the document record for preview/fallback.
 4. UI reads `doc.analysis` (normalized) through `AnalysisShared` / `ImageAnalysisView`.
 
 ### 5.3 Analyze API call

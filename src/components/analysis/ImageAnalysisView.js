@@ -2,9 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
-import { isDicomFile, isGeminiVisionUpload, isTextBundleFile, isZipFile } from '../../lib/medicalFileTypes';
+import { isDicomFile, isDocxFile, isGeminiVisionUpload, isTextBundleFile, isZipFile } from '../../lib/medicalFileTypes';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
+
+function documentKindLabel (file, long = false) {
+  if (file?.type === 'application/pdf') return 'PDF'
+  if (isDocxFile(file)) return 'DOCX'
+  return long ? 'Text' : 'TXT'
+}
 
 function ReportHeader({ doc, imageAnalysis }) {
   return (
@@ -163,7 +169,7 @@ function MultiImageStrip ({ doc, previewIndex, onSelectPreview }) {
             ) : sliceIsDoc ? (
               <div className="img-multi-strip__doc" role="presentation">
                 <span className="img-multi-strip__doc-label">
-                  {sliceFile?.type === 'application/pdf' ? 'PDF' : 'TXT'}
+                  {documentKindLabel(sliceFile)}
                 </span>
               </div>
             ) : (
@@ -257,7 +263,7 @@ function ImagePanel ({ doc }) {
           aria-label="Document preview"
         >
           <p className="img-preview-panel__doc-placeholder-text">
-            {sliceFile?.type === 'application/pdf' ? 'PDF' : 'Text'} file — open from the workspace to read full content. The report above combines this document with the selected imaging.
+            {documentKindLabel(sliceFile, true)} file — open from the workspace to read full content. The report above combines this document with the selected imaging.
           </p>
         </div>
       ) : mainIsDicom ? (

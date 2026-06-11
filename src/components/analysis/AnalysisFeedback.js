@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { File, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { useMedDocs } from '../../context/MedDocsContext'
-import { DICOM_MIME, isDicomFile, isZipFile, validateAnalyzeFile } from '../../lib/medicalFileTypes'
+import { DICOM_MIME, DOCX_MIME, isDicomFile, isDocxFile, isZipFile, validateAnalyzeFile } from '../../lib/medicalFileTypes'
 import {
   maxAnalyzeFileLabel,
   maxZipFileLabel,
@@ -12,6 +12,7 @@ import {
 const ACCEPT_FEEDBACK = [
   'application/pdf',
   'text/plain',
+  DOCX_MIME,
   'image/jpeg',
   'image/png',
   'image/webp',
@@ -27,10 +28,11 @@ let attachmentIdSeq = 1
 function validateFeedbackFile (file, addToast) {
   const typeOk =
     (file.type && ACCEPT_FEEDBACK.includes(file.type)) ||
+    isDocxFile(file) ||
     isDicomFile(file) ||
     isZipFile(file)
   if (!typeOk) {
-    addToast(`${file.name}: type not allowed (PDF, TXT, ZIP, images, DICOM .dcm)`, 'error')
+    addToast(`${file.name}: type not allowed (PDF, TXT, DOCX, ZIP, images, DICOM .dcm)`, 'error')
     return false
   }
   const result = validateAnalyzeFile(file)
@@ -203,7 +205,7 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
         type="file"
         className="analysis-feedback__file-input"
         multiple
-        accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.zip,.dcm,.dicom,application/pdf,text/plain,image/jpeg,image/png,image/webp,application/zip,application/x-zip-compressed,application/dicom"
+        accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp,.zip,.dcm,.dicom,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp,application/zip,application/x-zip-compressed,application/dicom"
         aria-label="Attach files to feedback"
         onChange={handleFileChange}
       />
