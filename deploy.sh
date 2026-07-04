@@ -39,6 +39,25 @@ done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
+FIREBASE_API_KEY="${NEXT_PUBLIC_FIREBASE_API_KEY:-}"
+FIREBASE_PROJECT_ID="${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-med-docs-1fe8d}"
+FIREBASE_AUTH_DOMAIN="${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-med-docs-1fe8d.firebaseapp.com}"
+FIREBASE_STORAGE_BUCKET="${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-med-docs-1fe8d.firebasestorage.app}"
+FIREBASE_MESSAGING_SENDER_ID="${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}"
+FIREBASE_APP_ID="${NEXT_PUBLIC_FIREBASE_APP_ID:-}"
+
+if [[ -z "$FIREBASE_API_KEY" ]]; then
+  echo "Error: NEXT_PUBLIC_FIREBASE_API_KEY is required (set in .env or environment)." >&2
+  exit 1
+fi
+
 echo "→ Project:  ${PROJECT_ID}"
 echo "→ Region:   ${REGION}"
 echo "→ Service:  ${SERVICE_NAME}"
@@ -61,6 +80,12 @@ docker buildx build \
   -f "$DOCKERFILE" \
   --build-arg "NEXT_PUBLIC_ANALYZE_API_BASE_URL=${ANALYZE_API_BASE_URL}" \
   --build-arg "NEXT_PUBLIC_API_AUTH_TOKEN=${API_AUTH_TOKEN}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_API_KEY=${FIREBASE_API_KEY}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}" \
+  --build-arg "NEXT_PUBLIC_FIREBASE_APP_ID=${FIREBASE_APP_ID}" \
   --push \
   .
 
@@ -69,7 +94,10 @@ gcloud run deploy "$SERVICE_NAME" \
   --image="$IMAGE" \
   --platform=managed \
   --region="$REGION" \
-  --allow-unauthenticated
+  --allow-unauthenticated \
+  --memory=1Gi \
+  --cpu=1 \
+  --port=3000
 
 echo ""
 echo "✓ Deployed ${SERVICE_NAME} (${IMAGE}) to ${REGION}"

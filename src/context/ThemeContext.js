@@ -24,13 +24,10 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initial =
       stored === 'dark' || stored === 'light'
         ? stored
-        : prefersDark
-          ? 'dark'
-          : 'light';
+        : 'light';
     setTheme(initial);
     applyTheme(initial);
     setMounted(true);

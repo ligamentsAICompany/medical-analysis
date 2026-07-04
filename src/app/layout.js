@@ -28,7 +28,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${plusJakarta.variable}`}>
         <Providers>{children}</Providers>
       </body>
