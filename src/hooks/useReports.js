@@ -8,18 +8,11 @@ import {
   saveReport as saveReportApi,
 } from '../lib/reportsClient'
 import { documentToReportPayload, reportToDocument } from '../lib/reportMappers'
-import { getApiAuthToken } from '../config/analyzeApi'
+import { ensureFreshApiAuthToken } from '../lib/auth-token'
 import { refreshFirebaseIdToken } from '../lib/firebase-client'
 
 async function resolveApiAuthToken () {
-  const cached = getApiAuthToken()
-  if (cached) return cached
-
-  try {
-    return await refreshFirebaseIdToken()
-  } catch {
-    return null
-  }
+  return ensureFreshApiAuthToken()
 }
 
 export function useReports ({

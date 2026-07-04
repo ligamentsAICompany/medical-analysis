@@ -1,12 +1,12 @@
 import {
-  getApiAuthToken,
+  getFreshApiAuthToken,
   getAnalyzeApiBaseUrl,
 } from '../config/analyzeApi'
 
 const USERS_API_PATH = '/api/v1/users'
 
-function authHeaders (json = false) {
-  const token = getApiAuthToken()
+async function authHeaders (json = false) {
+  const token = await getFreshApiAuthToken()
   if (!token) throw new Error('Sign in required')
   return {
     accept: 'application/json',
@@ -77,7 +77,7 @@ export function dedupeUsers (users = []) {
 export async function fetchUsers () {
   const res = await fetch(`${getAnalyzeApiBaseUrl()}${USERS_API_PATH}`, {
     method: 'GET',
-    headers: authHeaders(),
+    headers: await authHeaders(),
   })
 
   const rawText = await res.text()
@@ -91,7 +91,7 @@ export async function fetchUsers () {
 export async function createUser (payload) {
   const res = await fetch(`${getAnalyzeApiBaseUrl()}${USERS_API_PATH}`, {
     method: 'POST',
-    headers: authHeaders(true),
+    headers: await authHeaders(true),
     body: JSON.stringify(payload),
   })
 
@@ -107,7 +107,7 @@ export async function createUser (payload) {
 export async function updateUser (uid, payload) {
   const res = await fetch(`${getAnalyzeApiBaseUrl()}${USERS_API_PATH}/${encodeURIComponent(uid)}`, {
     method: 'PATCH',
-    headers: authHeaders(true),
+    headers: await authHeaders(true),
     body: JSON.stringify(payload),
   })
 
@@ -122,7 +122,7 @@ export async function updateUser (uid, payload) {
 export async function deleteUser (uid) {
   const res = await fetch(`${getAnalyzeApiBaseUrl()}${USERS_API_PATH}/${encodeURIComponent(uid)}`, {
     method: 'DELETE',
-    headers: authHeaders(),
+    headers: await authHeaders(),
   })
 
   if (res.status === 204) return

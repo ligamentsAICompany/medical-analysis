@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 const SILENCE_TIMEOUT_MS = 2500
 
-function isSupported () {
+function detectVoiceSupport () {
   return typeof window !== 'undefined'
     && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
 }
@@ -14,11 +14,15 @@ export function useVoiceRecognition (onFinalResult) {
   const [transcript, setTranscript] = useState('')
   const [finalTranscript, setFinalTranscript] = useState('')
   const [error, setError] = useState(null)
+  const [supported, setSupported] = useState(false)
 
   const recogRef = useRef(null)
   const accumulatedRef = useRef('')
   const silenceTimerRef = useRef(null)
-  const supported = isSupported()
+
+  useEffect(() => {
+    setSupported(detectVoiceSupport())
+  }, [])
 
   useEffect(() => () => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)

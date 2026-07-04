@@ -1,5 +1,5 @@
 import {
-  getApiAuthToken,
+  getFreshApiAuthToken,
   getReportApiUrl,
   getReportsApiUrl,
   getReportsMeApiUrl,
@@ -33,8 +33,8 @@ async function parseReportsResponse (res, rawText) {
   return raw
 }
 
-function authHeaders () {
-  const token = getApiAuthToken()
+async function authHeaders () {
+  const token = await getFreshApiAuthToken()
   if (!token) {
     throw new Error('Sign in required — no Firebase auth token available')
   }
@@ -52,7 +52,7 @@ export async function fetchUserProfile () {
   try {
     res = await fetch(getReportsMeApiUrl(), {
       method: 'GET',
-      headers: authHeaders(),
+      headers: await authHeaders(),
     })
   } catch (err) {
     console.error('fetchUserProfile failed', err)
@@ -77,7 +77,7 @@ export async function fetchUserReports () {
   try {
     res = await fetch(getReportsApiUrl(), {
       method: 'GET',
-      headers: authHeaders(),
+      headers: await authHeaders(),
     })
   } catch (err) {
     console.error('fetchUserReports failed', err)
@@ -97,7 +97,7 @@ export async function fetchReportById (reportId) {
   try {
     res = await fetch(getReportApiUrl(reportId), {
       method: 'GET',
-      headers: authHeaders(),
+      headers: await authHeaders(),
     })
   } catch (err) {
     console.error('fetchReportById failed', err)
@@ -124,7 +124,7 @@ export async function saveReport (payload) {
     res = await fetch(getReportsApiUrl(), {
       method: 'POST',
       headers: {
-        ...authHeaders(),
+        ...(await authHeaders()),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -147,7 +147,7 @@ export async function deleteReport (reportId) {
   try {
     res = await fetch(getReportApiUrl(reportId), {
       method: 'DELETE',
-      headers: authHeaders(),
+      headers: await authHeaders(),
     })
   } catch (err) {
     console.error('deleteReport failed', err)

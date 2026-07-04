@@ -78,7 +78,8 @@ export async function refreshFirebaseIdToken () {
   const user = auth?.currentUser
   if (!user) return null
 
-  const idToken = await user.getIdToken(true)
+  // getIdToken() returns a fresh token when the cached one has expired
+  const idToken = await user.getIdToken()
   setAuthToken(idToken)
   return idToken
 }

@@ -111,19 +111,31 @@ export function AuthProvider({ children }) {
   }, [refresh]);
 
   useEffect(() => {
-    if (!isFirebaseConfigured() || !user) return undefined;
+    if (!isFirebaseConfigured() || !user) return undefined
 
-    const interval = setInterval(async () => {
+    const refreshSession = async () => {
       try {
-        const idToken = await refreshFirebaseIdToken();
-        if (idToken) await syncSessionCookie(idToken);
+        const idToken = await refreshFirebaseIdToken()
+        if (idToken) await syncSessionCookie(idToken)
       } catch {
-        /* token refresh failed — next API call will surface it */
+        /* next API call will surface auth errors */
       }
-    }, 50 * 60 * 1000);
+    }
 
-    return () => clearInterval(interval);
-  }, [user]);
+    const interval = setInterval(refreshSession, 25 * 60 * 1000)
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSession()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [user])
 
   const login = useCallback(async (email, password) => {
     if (isFirebaseConfigured()) {

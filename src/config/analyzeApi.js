@@ -9,7 +9,7 @@
  *               POST /api/v1/analyze-gcs       (trigger analysis by gcs_path)
  */
 
-import { getAuthToken } from '../lib/auth-token'
+import { getAuthToken, ensureFreshApiAuthToken } from '../lib/auth-token'
 
 /** Production default when NEXT_PUBLIC_ANALYZE_API_BASE_URL is unset at build time. */
 export const DEFAULT_ANALYZE_API_BASE_URL =
@@ -98,6 +98,11 @@ export function getApiAuthToken () {
     process.env.NEXT_PUBLIC_ANALYZE_API_KEY?.trim() ||
     ''
   )
+}
+
+/** Prefer this for backend API calls — refreshes expired Firebase tokens. */
+export async function getFreshApiAuthToken () {
+  return ensureFreshApiAuthToken()
 }
 
 /**

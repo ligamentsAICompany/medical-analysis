@@ -131,19 +131,6 @@ function LoginForm() {
         </button>
 
         <div className="login-form__divider" aria-hidden />
-        <p className="login-form__hint login-form__hint--v2 text-muted">
-          <span className="login-form__hint-label">Firebase demo users</span>
-          <span className="login-form__hint-creds">
-            <kbd>manoj@meddocs.app</kbd>
-            <span aria-hidden> · </span>
-            <kbd>admin123</kbd>
-          </span>
-          <span className="login-form__hint-creds">
-            <kbd>admin@meddocs.app</kbd>
-            <span aria-hidden> · </span>
-            <kbd>admin123</kbd>
-          </span>
-        </p>
       </form>
     </div>
   );
