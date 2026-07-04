@@ -85,6 +85,57 @@ export async function loadModels(onProgressCb) {
 
 const DOC_LABELS = ['Lab Report', 'Prescription', 'Discharge Summary', 'Imaging Report', 'Referral Letter', 'Consent Form', 'Other'];
 
+const INTENT_HYPOTHESES = [
+  { label: 'navigate to a page or section in the app', intent: 'navigate' },
+  { label: 'search find filter or list medical reports', intent: 'search' },
+  { label: 'count how many reports or documents exist', intent: 'count' },
+  { label: 'open or view a specific report or latest report', intent: 'open' },
+  { label: 'delete or remove a report or user', intent: 'delete' },
+  { label: 'create add upload or attach a new document', intent: 'create' },
+  { label: 'help or show available commands', intent: 'help' },
+];
+
+const MODULE_HYPOTHESES = [
+  { label: 'dashboard overview and statistics', module: 'dashboard' },
+  { label: 'analysis workspace and file upload', module: 'analysis' },
+  { label: 'medical reports documents and studies', module: 'reports' },
+  { label: 'user accounts and admin members', module: 'users' },
+];
+
+export async function classifyAssistantCommand (text) {
+  await loadModels();
+  if (!pipelines.classifier) return null;
+
+  const snippet = (text || '').slice(0, 256);
+  const intentLabels = INTENT_HYPOTHESES.map((h) => h.label);
+  const moduleLabels = MODULE_HYPOTHESES.map((h) => h.label);
+
+  const [intentResult, moduleResult] = await Promise.all([
+    pipelines.classifier(snippet, intentLabels),
+    pipelines.classifier(snippet, moduleLabels),
+  ]);
+
+  const intentIdx = intentResult.labels.indexOf(intentResult.labels[0]);
+  const moduleIdx = moduleResult.labels.indexOf(moduleResult.labels[0]);
+  const intent = INTENT_HYPOTHESES[intentIdx]?.intent || 'unknown';
+  const module = MODULE_HYPOTHESES[moduleIdx]?.module || null;
+  const confidence = Math.min(intentResult.scores[0] || 0, moduleResult.scores[0] || 0);
+
+  return { intent, module, confidence };
+}
+
+export async function classifyDocumentType (text) {
+  await loadModels();
+  if (!pipelines.classifier) return null;
+
+  const snippet = (text || '').slice(0, 512);
+  const result = await pipelines.classifier(snippet, DOC_LABELS);
+  return {
+    type: result.labels[0] || 'Other',
+    confidence: result.scores[0] || 0,
+  };
+}
+
 export async function enhanceAnalysis(text) {
   if (!pipelines.ner || !pipelines.classifier) return null;
 

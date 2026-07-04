@@ -46,7 +46,7 @@ async function optionalExtractedText (file) {
   return file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 }
 
-export function useAnalysis ({ updateDocument, addToast }) {
+export function useAnalysis ({ updateDocument, addToast, persistReport }) {
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiLoadProgress, setAiLoadProgress] = useState(null);
   const [modelsReady, setModelsReady] = useState(true);
@@ -82,7 +82,7 @@ export function useAnalysis ({ updateDocument, addToast }) {
         setAiLoadProgress(null);
       }
     },
-    [updateDocument, addToast]
+    [updateDocument, addToast, persistReport]
   );
 
   const analyzeFileBundle = useCallback(
@@ -129,6 +129,11 @@ export function useAnalysis ({ updateDocument, addToast }) {
             ...(visionCount > 1 ? { multiImageCount: visionCount } : {}),
           },
         });
+        if (persistReport) {
+          persistReport(id).then((reportId) => {
+            if (reportId) addToast('Report saved', 'success', 3000);
+          });
+        }
       } catch (err) {
         console.error('Combined file analysis failed', err);
         updateDocument(id, { status: 'error' });
@@ -137,7 +142,7 @@ export function useAnalysis ({ updateDocument, addToast }) {
         setAiLoadProgress(null);
       }
     },
-    [updateDocument, addToast]
+    [updateDocument, addToast, persistReport]
   );
 
   /** @deprecated Use analyzeFileBundle */
@@ -192,6 +197,11 @@ export function useAnalysis ({ updateDocument, addToast }) {
             labValues,
           },
         });
+        if (persistReport) {
+          persistReport(id).then((reportId) => {
+            if (reportId) addToast('Report saved', 'success', 3000);
+          });
+        }
       } catch (err) {
         console.error('Document analysis failed', err);
         if (isTextBundleFile(file) && text) {
@@ -213,7 +223,7 @@ export function useAnalysis ({ updateDocument, addToast }) {
         setAiLoadProgress(null);
       }
     },
-    [updateDocument, addToast]
+    [updateDocument, addToast, persistReport]
   );
 
   const enhanceWithAI = useCallback(

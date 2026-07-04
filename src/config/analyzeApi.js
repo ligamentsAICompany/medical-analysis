@@ -9,6 +9,8 @@
  *               POST /api/v1/analyze-gcs       (trigger analysis by gcs_path)
  */
 
+import { getAuthToken } from '../lib/auth-token'
+
 /** Production default when NEXT_PUBLIC_ANALYZE_API_BASE_URL is unset at build time. */
 export const DEFAULT_ANALYZE_API_BASE_URL =
   'https://medical-analysis-backend-2p3fwh332a-uc.a.run.app'
@@ -21,6 +23,9 @@ export const UPLOAD_URL_API_PATH = '/api/v1/upload-url'
 
 /** Triggers analysis after a file has been PUT to GCS. */
 export const ANALYZE_GCS_API_PATH = '/api/v1/analyze-gcs'
+
+/** Reports CRUD — requires Firebase Bearer token. */
+export const REPORTS_API_PATH = '/api/v1/reports'
 
 /**
  * @returns {string} Origin, no trailing slash (e.g. https://….run.app)
@@ -54,6 +59,45 @@ export function getUploadUrlApiUrl () {
  */
 export function getAnalyzeGcsApiUrl () {
   return `${getAnalyzeApiBaseUrl()}${ANALYZE_GCS_API_PATH}`
+}
+
+/**
+ * Full URL for reports list / create.
+ * @returns {string}
+ */
+export function getReportsApiUrl () {
+  return `${getAnalyzeApiBaseUrl()}${REPORTS_API_PATH}`
+}
+
+/**
+ * Full URL for the authenticated user's profile + role.
+ * @returns {string}
+ */
+export function getReportsMeApiUrl () {
+  return `${getAnalyzeApiBaseUrl()}${REPORTS_API_PATH}/me`
+}
+
+/**
+ * Full URL for a single report.
+ * @param {string} reportId
+ * @returns {string}
+ */
+export function getReportApiUrl (reportId) {
+  return `${getAnalyzeApiBaseUrl()}${REPORTS_API_PATH}/${encodeURIComponent(reportId)}`
+}
+
+/**
+ * Bearer token for authenticated backend routes (reports API).
+ * Use a Firebase ID token in production; `dummy_token` works for local backend dev.
+ * @returns {string}
+ */
+export function getApiAuthToken () {
+  return (
+    getAuthToken() ||
+    process.env.NEXT_PUBLIC_API_AUTH_TOKEN?.trim() ||
+    process.env.NEXT_PUBLIC_ANALYZE_API_KEY?.trim() ||
+    ''
+  )
 }
 
 /**

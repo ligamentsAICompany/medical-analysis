@@ -1,12 +1,5 @@
-'use client';
+import { redirect } from 'next/navigation'
 
-import React, { Suspense } from 'react';
-import MedDocsApp from '../components/MedDocsApp';
-
-export default function Page() {
-  return (
-    <Suspense fallback={<div className="app" style={{ padding: 32 }}><p className="text-muted">Loading…</p></div>}>
-      <MedDocsApp />
-    </Suspense>
-  );
+export default function HomePage () {
+  redirect('/dashboard')
 }

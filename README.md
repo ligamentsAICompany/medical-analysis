@@ -112,10 +112,10 @@ scripts/
 ## Getting Started
 
 ```bash
-npm install          # Also copies pdfjs worker to public/ via postinstall
-npm run dev          # Starts Next.js dev server at http://localhost:3000
-npm run build        # Production build
-npm run start        # Serve production build
+pnpm install         # Also copies pdfjs worker to public/ via postinstall
+pnpm dev             # Starts Next.js dev server at http://localhost:3000
+pnpm build           # Production build
+pnpm start           # Serve production build
 ```
 
 To regenerate the sample PDFs:

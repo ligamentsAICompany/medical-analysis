@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Activity,
@@ -34,12 +34,20 @@ const FEATURES = [
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
 
-  const [email, setEmail] = useState('demo@meddocs.app');
-  const [password, setPassword] = useState('demo1234');
+  const [email, setEmail] = useState('manoj@meddocs.app');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user) {
+      const from = searchParams.get('from');
+      const safe = from && from.startsWith('/') && !from.startsWith('//') ? from : '/dashboard';
+      router.replace(safe);
+    }
+  }, [loading, user, router, searchParams]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -49,7 +57,7 @@ function LoginForm() {
       try {
         await login(email, password);
         const from = searchParams.get('from');
-        const safe = from && from.startsWith('/') && !from.startsWith('//') ? from : '/';
+        const safe = from && from.startsWith('/') && !from.startsWith('//') ? from : '/dashboard';
         router.replace(safe);
         router.refresh();
       } catch (err) {
@@ -124,15 +132,17 @@ function LoginForm() {
 
         <div className="login-form__divider" aria-hidden />
         <p className="login-form__hint login-form__hint--v2 text-muted">
-          <span className="login-form__hint-label">Demo credentials</span>
+          <span className="login-form__hint-label">Firebase demo users</span>
           <span className="login-form__hint-creds">
-            <kbd>demo@meddocs.app</kbd>
+            <kbd>manoj@meddocs.app</kbd>
             <span aria-hidden> · </span>
-            <kbd>demo1234</kbd>
+            <kbd>admin123</kbd>
           </span>
-          {/* <span className="login-form__hint-env">
-            Configure <code>MEDDOCS_LOGIN_EMAIL</code> and <code>MEDDOCS_LOGIN_PASSWORD</code> in production.
-          </span> */}
+          <span className="login-form__hint-creds">
+            <kbd>admin@meddocs.app</kbd>
+            <span aria-hidden> · </span>
+            <kbd>admin123</kbd>
+          </span>
         </p>
       </form>
     </div>

@@ -9,6 +9,7 @@ import PdfViewer from './PdfViewer';
 import Toast from './Toast';
 import { AppHeader } from './AppHeader';
 import { useMedDocs } from '../context/MedDocsContext';
+import { useAuth } from '../context/AuthContext';
 import {
   isAnalyzeUploadFile,
   isDocumentBundleFile,
@@ -46,11 +47,13 @@ const SAMPLE_IMAGES = [
 export default function MedDocsApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const {
     toasts, addToast, removeToast,
     documents, addDocument, addImageBundle, deleteDocument,
     analyzeFile,
     analyzeFileBundle,
+    reportsLoading,
   } = useMedDocs();
 
   const [viewerDoc, setViewerDoc] = useState(null);
@@ -201,6 +204,8 @@ export default function MedDocsApp() {
               onView={setViewerDoc}
               onAnalysis={handleOpenAnalysis}
               onDelete={handleDelete}
+              loading={reportsLoading}
+              isAdmin={Boolean(user?.isAdmin)}
             />
           </div>
         </div>

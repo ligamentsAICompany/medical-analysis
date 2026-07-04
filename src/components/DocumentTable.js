@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Eye, BarChart2, Trash2, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
@@ -47,11 +48,20 @@ function SortIcon({ field, sort }) {
   return sort.dir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
 }
 
-export default function DocumentTable({ documents, onView, onAnalysis, onDelete }) {
+export default function DocumentTable({ documents, onView, onAnalysis, onDelete, loading = false, isAdmin = false }) {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sort, setSort] = useState({ field: 'uploadedAt', dir: 'desc' });
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q) {
+      setSearch(q);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   const allTypes = useMemo(() => {
     const types = new Set(documents.map(d => d.analysis?.classification?.type).filter(Boolean));
@@ -64,7 +74,8 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete 
       const matchSearch = !q
         || d.name.toLowerCase().includes(q)
         || (d.analysis?.patientName || '').toLowerCase().includes(q)
-        || (d.analysis?.classification?.type || '').toLowerCase().includes(q);
+        || (d.analysis?.classification?.type || '').toLowerCase().includes(q)
+        || (isAdmin && (d.createdBy || '').toLowerCase().includes(q));
       const matchType = typeFilter === 'all' || d.analysis?.classification?.type === typeFilter;
       return matchSearch && matchType;
     });
@@ -134,6 +145,11 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete 
               <th className="col-patient sortable" onClick={() => toggleSort('patient')}>
                 Patient <SortIcon field="patient" sort={sort} />
               </th>
+              {isAdmin ? (
+                <th className="col-owner">
+                  Uploaded by
+                </th>
+              ) : null}
               <th className="col-size sortable" onClick={() => toggleSort('size')}>
                 Size <SortIcon field="size" sort={sort} />
               </th>
@@ -147,10 +163,18 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete 
           <tbody>
             {pageData.length === 0 && (
               <tr>
-                <td colSpan={8} className="table-empty">
+                <td colSpan={isAdmin ? 9 : 8} className="table-empty">
                   <div className="table-empty-content">
                     <span style={{ fontSize: 32 }}>📂</span>
-                    <p>{search || typeFilter !== 'all' ? 'No documents match your filters.' : 'No documents yet. Upload a file to get started.'}</p>
+                    <p>
+                      {loading
+                        ? 'Loading your reports…'
+                        : search || typeFilter !== 'all'
+                          ? 'No documents match your filters.'
+                          : isAdmin
+                            ? 'No reports from any user yet.'
+                            : 'No reports yet. Upload a file to get started.'}
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -160,7 +184,6 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete 
                 <td className="col-num text-muted">{(page - 1) * PAGE_SIZE + i + 1}</td>
                 <td className="col-name">
                   <span className="filename" title={doc.name}>{doc.name}</span>
-                  {doc.isMock && <span className="mock-tag">demo</span>}
                 </td>
                 <td className="col-type">
                   {doc.analysis?.classification ? (
@@ -170,6 +193,11 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete 
                 <td className="col-patient">
                   {doc.analysis?.patientName || <span className="text-muted">—</span>}
                 </td>
+                {isAdmin ? (
+                  <td className="col-owner">
+                    {doc.createdBy || <span className="text-muted">—</span>}
+                  </td>
+                ) : null}
                 <td className="col-size text-muted">{formatBytes(doc.size)}</td>
                 <td className="col-date text-muted">{formatDate(doc.uploadedAt)}</td>
                 <td className="col-status"><StatusBadge status={doc.status} /></td>

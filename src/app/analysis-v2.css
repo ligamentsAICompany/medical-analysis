@@ -837,6 +837,16 @@ html[data-theme='dark'] .analysis-feedback__textarea {
   color: var(--ui-text-muted);
 }
 
+.analysis-feedback__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.analysis-feedback__submit {
+  min-width: 148px;
+}
+
 .analysis-feedback__file-input {
   position: absolute;
   width: 1px;

@@ -6,7 +6,7 @@ import { ArrowLeft, Eye, Download, Trash2, FileText, Image, Loader } from 'lucid
 import { AnalysisDocumentBody } from './analysis/AnalysisShared';
 import { ImageAnalysisView } from './analysis/ImageAnalysisView';
 import { AnalysisFeedbackSection } from './analysis/AnalysisFeedback';
-import { AppHeader } from './AppHeader';
+import { PageHeader } from './shell/PageHeader';
 import { isVisionStudyDoc } from '../lib/medicalFileTypes';
 
 const formatFileSize = (bytes) => {
@@ -43,6 +43,7 @@ export default function AnalysisPageView({
   onEnhanceAI,
   aiLoading,
   aiLoadProgress,
+  embedded = false,
 }) {
   const downloadFile = useCallback(() => {
     if (!doc?.objectUrl) return;
@@ -87,12 +88,17 @@ export default function AnalysisPageView({
   if (!doc) return null;
 
   return (
-    <div className="app">
-      <AppHeader />
-      <div className="analysis-page analysis-page--v2 analysis-page--premium">
+    <>
+      <PageHeader
+        breadcrumb="Analysis · Report"
+        title={doc.name}
+        description={`${docTypeLabel} · ${statusLabel(doc.status)}${doc.createdBy ? ` · ${doc.createdBy}` : ''}`}
+      />
+
+      <div className={`analysis-page analysis-page--v2 analysis-page--premium${embedded ? ' analysis-page--embedded' : ''}`}>
         <div className="analysis-shell">
           <nav className="analysis-toolbar" aria-label="Document actions">
-            <Link href="/" className="analysis-toolbar__back" aria-label="Back to workspace">
+            <Link href="/analysis" className="analysis-toolbar__back" aria-label="Back to analysis">
               <ArrowLeft size={18} aria-hidden />
               <span>Back</span>
             </Link>
@@ -176,6 +182,6 @@ export default function AnalysisPageView({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

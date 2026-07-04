@@ -3,18 +3,21 @@
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 FROM base AS deps
 RUN mkdir -p public
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 ARG NEXT_PUBLIC_ANALYZE_API_BASE_URL=https://medical-analysis-backend-2p3fwh332a-uc.a.run.app
+ARG NEXT_PUBLIC_API_AUTH_TOKEN=dummy_token
 ENV NEXT_PUBLIC_ANALYZE_API_BASE_URL=$NEXT_PUBLIC_ANALYZE_API_BASE_URL
+ENV NEXT_PUBLIC_API_AUTH_TOKEN=$NEXT_PUBLIC_API_AUTH_TOKEN
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 FROM base AS runner
 ENV NODE_ENV=production

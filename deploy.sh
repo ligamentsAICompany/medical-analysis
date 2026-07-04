@@ -17,6 +17,7 @@ DOCKERFILE="${DOCKERFILE:-Dockerfile}"
 
 IMAGE="gcr.io/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
 ANALYZE_API_BASE_URL="${ANALYZE_API_BASE_URL:-https://medical-analysis-backend-2p3fwh332a-uc.a.run.app}"
+API_AUTH_TOKEN="${API_AUTH_TOKEN:-dummy_token}"
 SKIP_AUTH=false
 
 for arg in "$@"; do
@@ -59,6 +60,7 @@ docker buildx build \
   -t "$IMAGE" \
   -f "$DOCKERFILE" \
   --build-arg "NEXT_PUBLIC_ANALYZE_API_BASE_URL=${ANALYZE_API_BASE_URL}" \
+  --build-arg "NEXT_PUBLIC_API_AUTH_TOKEN=${API_AUTH_TOKEN}" \
   --push \
   .
 

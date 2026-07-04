@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { MOCK_DOCUMENTS } from '../lib/mockData';
 import {
   DICOM_MIME,
   effectiveVisionMimeType,
@@ -14,7 +13,7 @@ import {
 let nextId = 1;
 
 export function useDocuments() {
-  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [documents, setDocuments] = useState([]);
 
   const addDocument = useCallback((file) => {
     const id = `doc-${Date.now()}-${nextId++}`;
@@ -38,6 +37,8 @@ export function useDocuments() {
       bundleFiles: null,
       bundleObjectUrls: null,
       userFeedback: null,
+      reportId: null,
+      isPersisted: false,
     };
     setDocuments(prev => [doc, ...prev]);
     return id;
@@ -84,6 +85,8 @@ export function useDocuments() {
       bundleFiles: files,
       bundleObjectUrls,
       userFeedback: null,
+      reportId: null,
+      isPersisted: false,
     };
     setDocuments((prev) => [doc, ...prev]);
     return id;
@@ -103,7 +106,7 @@ export function useDocuments() {
       const doc = prev.find((d) => d.id === id);
       if (doc?.bundleObjectUrls?.length) {
         doc.bundleObjectUrls.forEach((u) => URL.revokeObjectURL(u));
-      } else if (doc?.objectUrl) {
+      } else if (doc?.objectUrl && doc.objectUrl.startsWith('blob:')) {
         URL.revokeObjectURL(doc.objectUrl);
       }
       const feedbackUrls = doc?.userFeedback?.attachments
@@ -116,5 +119,12 @@ export function useDocuments() {
     });
   }, []);
 
-  return { documents, addDocument, addImageBundle, updateDocument, deleteDocument };
+  return {
+    documents,
+    setDocuments,
+    addDocument,
+    addImageBundle,
+    updateDocument,
+    deleteDocument,
+  };
 }

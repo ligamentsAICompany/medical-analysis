@@ -295,7 +295,6 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
               <>
                 <div className="classification-header">
                   <span className="classification-type">{docType}</span>
-                  {doc.isMock && <span className="demo-tag">demo</span>}
                   {analysis.aiEnhanced && <span className="ai-badge"><Sparkles size={11} /> AI</span>}
                 </div>
                 <ConfidenceBar value={analysis.classification.confidence} />

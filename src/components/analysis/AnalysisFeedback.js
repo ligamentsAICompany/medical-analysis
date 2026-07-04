@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { File, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { useMedDocs } from '../../context/MedDocsContext'
 import { DICOM_MIME, DOCX_MIME, isDicomFile, isDocxFile, isZipFile, validateAnalyzeFile } from '../../lib/medicalFileTypes'
@@ -44,7 +45,8 @@ function validateFeedbackFile (file, addToast) {
 }
 
 export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = null }) {
-  const { updateDocument, addToast } = useMedDocs()
+  const router = useRouter()
+  const { updateDocument, addToast, persistReport } = useMedDocs()
   const fb = doc.userFeedback || null
   const [comment, setComment] = useState(fb?.comment || '')
   const fileInputRef = useRef(null)
@@ -88,6 +90,59 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
       }
     })
   }, [comment, doc.id, fb?.comment, updateDocument])
+
+  const attachments = fb?.attachments || []
+
+  const hasFeedbackContent =
+    Boolean(fb?.sentiment) ||
+    Boolean(comment.trim()) ||
+    attachments.length > 0
+
+  const isCommentDirty = comment.trim() !== (fb?.comment || '')
+
+  const handleSubmitFeedback = useCallback(async () => {
+    const trimmed = comment.trim()
+    if (!fb?.sentiment && !trimmed && attachments.length === 0) {
+      addToast('Add a rating, comment, or attachment before submitting', 'warning')
+      return
+    }
+
+    updateDocument(doc.id, (d) => {
+      const prev = d.userFeedback || {}
+      return {
+        userFeedback: {
+          ...prev,
+          sentiment: prev.sentiment ?? null,
+          comment: trimmed,
+          attachments: prev.attachments || [],
+          submittedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    })
+
+    if (persistReport) {
+      const feedbackOverride = {
+        sentiment: fb?.sentiment ?? null,
+        comment: trimmed,
+        attachments: fb?.attachments || [],
+        submittedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      const reportId = await persistReport(doc.id, { withFeedback: true, feedbackOverride })
+      if (!reportId) return
+
+      addToast(
+        !doc.reportId ? 'Feedback and report saved' : 'Feedback submitted',
+        'success'
+      )
+      router.push('/analysis')
+      return
+    }
+
+    addToast('Feedback submitted', 'success')
+    router.push('/analysis')
+  }, [addToast, attachments.length, comment, doc.id, doc.reportId, fb?.sentiment, fb?.attachments, persistReport, router, updateDocument])
 
   const handlePickFiles = useCallback(() => {
     fileInputRef.current?.click()
@@ -166,7 +221,6 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
   if (doc.status !== 'ready') return null
 
   const active = fb?.sentiment || null
-  const attachments = fb?.attachments || []
 
   const thumbRow = (
     <div
@@ -290,11 +344,27 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
         </div>
       )}
 
-      {fb?.updatedAt && (
+      <div className="analysis-feedback__actions">
+        <button
+          type="button"
+          className="btn btn--primary analysis-feedback__submit"
+          onClick={handleSubmitFeedback}
+          disabled={!hasFeedbackContent && !isCommentDirty}
+          aria-label="Submit feedback"
+        >
+          Submit feedback
+        </button>
+      </div>
+
+      {fb?.submittedAt ? (
+        <p className="analysis-feedback__saved" role="status">
+          Submitted {new Date(fb.submittedAt).toLocaleString()}
+        </p>
+      ) : fb?.updatedAt ? (
         <p className="analysis-feedback__saved" role="status">
           Saved {new Date(fb.updatedAt).toLocaleString()}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }
