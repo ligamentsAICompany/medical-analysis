@@ -37,7 +37,6 @@ export const INTENT_KEYWORDS = {
 export const QUICK_COMMANDS = [
   'Go to dashboard',
   'Open analysis',
-  'Open latest report',
 ]
 
 export const ADMIN_QUICK_COMMANDS = [

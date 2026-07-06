@@ -44,6 +44,23 @@ async function authHeaders () {
   }
 }
 
+/** Avoid Next.js / browser caching stale report lists in dev. */
+const REPORTS_FETCH_INIT = { cache: 'no-store' }
+
+/**
+ * @param {unknown} raw
+ * @returns {object[]}
+ */
+function normalizeReportsList (raw) {
+  if (Array.isArray(raw)) return raw
+  if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.reports)) return raw.reports
+    if (Array.isArray(raw.data)) return raw.data
+    if (Array.isArray(raw.items)) return raw.items
+  }
+  return []
+}
+
 /**
  * @returns {Promise<{ uid: string, email: string, name: string, role: string, isAdmin: boolean }|null>}
  */
@@ -53,6 +70,7 @@ export async function fetchUserProfile () {
     res = await fetch(getReportsMeApiUrl(), {
       method: 'GET',
       headers: await authHeaders(),
+      ...REPORTS_FETCH_INIT,
     })
   } catch (err) {
     console.error('fetchUserProfile failed', err)
@@ -78,6 +96,7 @@ export async function fetchUserReports () {
     res = await fetch(getReportsApiUrl(), {
       method: 'GET',
       headers: await authHeaders(),
+      ...REPORTS_FETCH_INIT,
     })
   } catch (err) {
     console.error('fetchUserReports failed', err)
@@ -85,7 +104,8 @@ export async function fetchUserReports () {
   }
 
   const rawText = await res.text()
-  return parseReportsResponse(res, rawText)
+  const raw = await parseReportsResponse(res, rawText)
+  return normalizeReportsList(raw)
 }
 
 /**
@@ -98,6 +118,7 @@ export async function fetchReportById (reportId) {
     res = await fetch(getReportApiUrl(reportId), {
       method: 'GET',
       headers: await authHeaders(),
+      ...REPORTS_FETCH_INIT,
     })
   } catch (err) {
     console.error('fetchReportById failed', err)

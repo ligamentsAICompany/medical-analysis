@@ -9,10 +9,21 @@ import {
 } from '../lib/reportsClient'
 import { documentToReportPayload, reportToDocument } from '../lib/reportMappers'
 import { ensureFreshApiAuthToken } from '../lib/auth-token'
-import { refreshFirebaseIdToken } from '../lib/firebase-client'
 
-async function resolveApiAuthToken () {
-  return ensureFreshApiAuthToken()
+const TOKEN_RETRY_ATTEMPTS = 6
+const TOKEN_RETRY_DELAY_MS = 250
+
+async function resolveApiAuthTokenWithRetry () {
+  for (let attempt = 0; attempt < TOKEN_RETRY_ATTEMPTS; attempt += 1) {
+    const token = await ensureFreshApiAuthToken()
+    if (token) return token
+    if (attempt < TOKEN_RETRY_ATTEMPTS - 1) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, TOKEN_RETRY_DELAY_MS * (attempt + 1))
+      })
+    }
+  }
+  return null
 }
 
 export function useReports ({
@@ -27,17 +38,25 @@ export function useReports ({
   const [reportsLoading, setReportsLoading] = useState(false)
   const [reportsLoaded, setReportsLoaded] = useState(false)
   const prevUserIdRef = useRef(null)
+  const loadSeqRef = useRef(0)
 
-  const loadReports = useCallback(async () => {
-    const token = await resolveApiAuthToken()
+  const loadReports = useCallback(async ({ silent = false } = {}) => {
+    const seq = loadSeqRef.current + 1
+    loadSeqRef.current = seq
+
+    const token = await resolveApiAuthTokenWithRetry()
     if (!token) {
-      setReportsLoaded(true)
-      return
+      if (!silent) {
+        console.warn('Reports load skipped — Firebase auth token not ready yet')
+      }
+      return false
     }
 
-    setReportsLoading(true)
+    if (!silent) setReportsLoading(true)
     try {
       const reports = await fetchUserReports()
+      if (loadSeqRef.current !== seq) return true
+
       const persisted = (reports || []).map(reportToDocument)
       const seen = new Set()
 
@@ -50,12 +69,17 @@ export function useReports ({
         })
         return [...sessionDocs, ...uniquePersisted]
       })
+      return true
     } catch (err) {
+      if (loadSeqRef.current !== seq) return false
       console.error('Failed to load reports', err)
       addToast(err?.message || 'Could not load saved reports', 'warning', 5000)
+      return false
     } finally {
-      setReportsLoading(false)
-      setReportsLoaded(true)
+      if (loadSeqRef.current === seq) {
+        if (!silent) setReportsLoading(false)
+        setReportsLoaded(true)
+      }
     }
   }, [addToast, setDocuments])
 
@@ -71,16 +95,50 @@ export function useReports ({
       return undefined
     }
 
-    if (prevUserIdRef.current !== userId) {
-      setDocuments([])
+    const userChanged = prevUserIdRef.current !== userId
+    if (userChanged) {
+      if (prevUserIdRef.current) {
+        setDocuments([])
+      }
       prevUserIdRef.current = userId
+      setReportsLoaded(false)
     }
 
-    setReportsLoaded(false)
-    loadReports()
+    let cancelled = false
 
-    return undefined
+    const run = async () => {
+      let ok = await loadReports()
+      if (cancelled) return
+
+      if (!ok) {
+        await new Promise((resolve) => { setTimeout(resolve, 600) })
+        if (cancelled) return
+        ok = await loadReports({ silent: true })
+      }
+
+      if (!cancelled && !ok) {
+        setReportsLoaded(true)
+      }
+    }
+
+    run()
+
+    return () => {
+      cancelled = true
+    }
   }, [isAuthenticated, authLoading, userId, loadReports, setDocuments])
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId || authLoading) return undefined
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      loadReports({ silent: documents.length > 0 })
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [isAuthenticated, authLoading, userId, loadReports, documents.length])
 
   const persistReport = useCallback(
     async (docId, { withFeedback = false, feedbackOverride = null } = {}) => {
@@ -94,7 +152,7 @@ export function useReports ({
       if (doc.reportId && !withFeedback) return doc.reportId
       if (doc.reportId && withFeedback) return doc.reportId
 
-      const token = await resolveApiAuthToken()
+      const token = await resolveApiAuthTokenWithRetry()
       if (!token) {
         addToast('Sign in to save reports', 'warning', 5000)
         return null
@@ -126,7 +184,7 @@ export function useReports ({
 
   const loadReport = useCallback(
     async (reportId) => {
-      const token = await resolveApiAuthToken()
+      const token = await resolveApiAuthTokenWithRetry()
       if (!token) {
         addToast('Sign in to load reports', 'warning', 5000)
         return null
@@ -161,7 +219,7 @@ export function useReports ({
       const doc = documents.find((d) => d.id === docId)
       if (!doc?.reportId) return true
 
-      const token = await resolveApiAuthToken()
+      const token = await resolveApiAuthTokenWithRetry()
       if (!token) return true
 
       try {

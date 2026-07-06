@@ -9,22 +9,27 @@ export function VoiceButton ({
   isProcessing,
   onStart,
   onStop,
+  className = '',
+  label = '',
 }) {
+  const mergedClass = (base) => `${base}${className ? ` ${className}` : ''}`.trim()
+
   if (!isSupported) {
     return (
       <div
-        className="assistant-voice assistant-voice--disabled"
+        className={mergedClass('assistant-voice assistant-voice--disabled')}
         title="Voice not supported in this browser. Use Chrome or Edge."
         aria-label="Voice not supported"
       >
         <PiMicrophoneSlash size={16} aria-hidden />
+        {label ? <span className="assistant-voice__label">{label}</span> : null}
       </div>
     )
   }
 
   if (isProcessing) {
     return (
-      <div className="assistant-voice assistant-voice--processing" aria-hidden>
+      <div className={mergedClass('assistant-voice assistant-voice--processing')} aria-hidden>
         <span className="assistant-voice__spinner" />
       </div>
     )
@@ -33,13 +38,14 @@ export function VoiceButton ({
   return (
     <button
       type="button"
-      className={`assistant-voice${isListening ? ' assistant-voice--active' : ''}`}
+      className={mergedClass(`assistant-voice${isListening ? ' assistant-voice--active' : ''}`)}
       onClick={isListening ? onStop : onStart}
       aria-label={isListening ? 'Stop recording' : 'Start voice input'}
       title={isListening ? 'Stop recording' : 'Voice input'}
     >
       {isListening ? <span className="assistant-voice__ping" aria-hidden /> : null}
       <PiMicrophone size={16} aria-hidden />
+      {label ? <span className="assistant-voice__label">{label}</span> : null}
     </button>
   )
 }

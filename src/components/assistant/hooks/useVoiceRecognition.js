@@ -18,6 +18,7 @@ export function useVoiceRecognition (onFinalResult) {
 
   const recogRef = useRef(null)
   const accumulatedRef = useRef('')
+  const liveTranscriptRef = useRef('')
   const silenceTimerRef = useRef(null)
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export function useVoiceRecognition (onFinalResult) {
     setTranscript('')
     setFinalTranscript('')
     accumulatedRef.current = ''
+    liveTranscriptRef.current = ''
 
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition
     const recog = new SpeechRec()
@@ -52,15 +54,20 @@ export function useVoiceRecognition (onFinalResult) {
 
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i += 1) {
-        const t = e.results[i][0].transcript
+        const t = e.results[i][0].transcript.trim()
+        if (!t) continue
         if (e.results[i].isFinal) {
-          accumulatedRef.current += `${accumulatedRef.current ? ' ' : ''}${t.trim()}`
+          accumulatedRef.current = accumulatedRef.current
+            ? `${accumulatedRef.current} ${t}`
+            : t
         } else {
-          interim = t
+          interim = interim ? `${interim} ${t}` : t
         }
       }
 
-      setTranscript(interim || accumulatedRef.current)
+      const display = [accumulatedRef.current, interim].filter(Boolean).join(' ')
+      liveTranscriptRef.current = display
+      setTranscript(display)
 
       silenceTimerRef.current = setTimeout(() => {
         recogRef.current?.stop()
@@ -83,8 +90,9 @@ export function useVoiceRecognition (onFinalResult) {
       setListening(false)
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
 
-      const final = accumulatedRef.current.trim()
+      const final = liveTranscriptRef.current.trim()
       accumulatedRef.current = ''
+      liveTranscriptRef.current = ''
 
       if (final) {
         setFinalTranscript(final)

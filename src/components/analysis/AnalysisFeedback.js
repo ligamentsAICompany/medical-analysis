@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { File, ThumbsDown, ThumbsUp, X } from 'lucide-react'
+import { VoiceButton } from '../assistant/VoiceButton'
+import { useVoiceRecognition } from '../assistant/hooks/useVoiceRecognition'
 import { useMedDocs } from '../../context/MedDocsContext'
 import { DICOM_MIME, DOCX_MIME, isDicomFile, isDocxFile, isZipFile, validateAnalyzeFile } from '../../lib/medicalFileTypes'
 import {
@@ -49,7 +51,38 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
   const { updateDocument, addToast, persistReport } = useMedDocs()
   const fb = doc.userFeedback || null
   const [comment, setComment] = useState(fb?.comment || '')
+  const [voiceError, setVoiceError] = useState(null)
   const fileInputRef = useRef(null)
+  const voiceBaseRef = useRef('')
+
+  const handleVoiceFinal = useCallback((text) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    const base = voiceBaseRef.current
+    const next = base ? `${base} ${trimmed}` : trimmed
+    setComment(next.slice(0, 2000))
+    voiceBaseRef.current = ''
+  }, [])
+
+  const voice = useVoiceRecognition(handleVoiceFinal)
+
+  const handleVoiceStart = useCallback(() => {
+    setVoiceError(null)
+    voiceBaseRef.current = comment.trim()
+    voice.start()
+  }, [comment, voice])
+
+  useEffect(() => {
+    if (!voice.isListening) return
+    const base = voiceBaseRef.current
+    const spoken = voice.transcript.trim()
+    const next = spoken ? (base ? `${base} ${spoken}` : spoken) : base
+    setComment(next.slice(0, 2000))
+  }, [voice.transcript, voice.isListening])
+
+  useEffect(() => {
+    if (voice.error) setVoiceError(voice.error)
+  }, [voice.error])
 
   useEffect(() => {
     setComment(fb?.comment || '')
@@ -271,7 +304,7 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
       ) : showTitle ? (
         <div className="analysis-feedback__header">
           <div className="analysis-feedback__header-text">
-            <p className="analysis-feedback__title">Was this analysis helpful?</p>
+            <p className="analysis-feedback__title">Was this analysis ?</p>
             <p className="analysis-feedback__hint">Your feedback improves the product</p>
           </div>
           {thumbRow}
@@ -283,33 +316,69 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
       )}
 
       <span id={`analysis-feedback-attach-hint-${doc.id}`} className="sr-only">
-        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, ZIP, JPEG, PNG, WebP, or DICOM (.dcm). Most files up to {maxAnalyzeFileLabel}; ZIP up to {maxZipFileLabel}.
+        Attach up to {MAX_FEEDBACK_FILES} files: PDF, plain text, ZIP, JPEG, PNG, WebP, or DICOM (.dcm). Most files up to {maxAnalyzeFileLabel}; ZIP up to {maxZipFileLabel}. Use the microphone to dictate comments.
       </span>
-      <div className="analysis-feedback__textarea-wrap">
+      <div className="analysis-feedback__composer">
         <textarea
           id={`analysis-feedback-${doc.id}`}
-          className="analysis-feedback__textarea analysis-feedback__textarea--with-attach"
+          className="analysis-feedback__textarea"
           rows={4}
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(e) => {
+            if (voice.isListening) voice.stop()
+            voiceBaseRef.current = e.target.value.trim()
+            setComment(e.target.value)
+          }}
           onBlur={handleCommentBlur}
-          placeholder="Comments (optional). Use the file icon to attach files."
+          placeholder="Share what was helpful or what could be improved…"
           maxLength={2000}
           aria-label="Feedback comments (optional)"
           aria-describedby={`analysis-feedback-attach-hint-${doc.id}`}
         />
-        <button
-          type="button"
-          className="analysis-feedback__textarea-attach"
-          onClick={handlePickFiles}
-          disabled={attachments.length >= MAX_FEEDBACK_FILES}
-          aria-label="Attach files to feedback"
-          aria-describedby={`analysis-feedback-attach-hint-${doc.id}`}
-          title="Attach files"
+        <div
+          className="analysis-feedback__composer-toolbar"
+          role="toolbar"
+          aria-label="Feedback tools"
         >
-          <File size={18} strokeWidth={1.75} aria-hidden />
-        </button>
+          <div className="analysis-feedback__composer-tools">
+            <button
+              type="button"
+              className="analysis-feedback__tool-btn"
+              onClick={handlePickFiles}
+              disabled={attachments.length >= MAX_FEEDBACK_FILES || voice.isListening}
+              aria-label="Attach files to feedback"
+              aria-describedby={`analysis-feedback-attach-hint-${doc.id}`}
+              title="Attach files"
+            >
+              <File size={17} strokeWidth={1.75} aria-hidden />
+              <span className="analysis-feedback__tool-label">Attach</span>
+            </button>
+            <VoiceButton
+              className="analysis-feedback__tool-btn"
+              label="Voice"
+              isSupported={voice.isSupported}
+              isListening={voice.isListening}
+              isProcessing={false}
+              onStart={handleVoiceStart}
+              onStop={voice.stop}
+            />
+            {voice.isListening ? (
+              <span className="analysis-feedback__listening" role="status" aria-live="polite">
+                Listening…
+              </span>
+            ) : null}
+          </div>
+          <span className="analysis-feedback__char-count" aria-live="polite">
+            {comment.length}/2000
+          </span>
+        </div>
       </div>
+
+      {voiceError ? (
+        <p className="analysis-feedback__voice-error" role="alert">
+          {voiceError}
+        </p>
+      ) : null}
 
       {attachments.length > 0 && (
         <div className="analysis-feedback__attach-block">
