@@ -6,8 +6,18 @@ import {
   fetchReportById,
   fetchUserReports,
   saveReport as saveReportApi,
+  updateReport as updateReportApi,
 } from '../lib/reportsClient'
-import { documentToReportPayload, reportToDocument } from '../lib/reportMappers'
+import {
+  documentToFeedbackPayload,
+  documentToReportPayload,
+  mapFeedbackAttachments,
+  reportToDocument,
+} from '../lib/reportMappers'
+import {
+  collectFeedbackAttachmentFiles,
+  collectInitialReportFiles,
+} from '../lib/reportPersist'
 import { ensureFreshApiAuthToken } from '../lib/auth-token'
 
 const TOKEN_RETRY_ATTEMPTS = 6
@@ -24,6 +34,45 @@ async function resolveApiAuthTokenWithRetry () {
     }
   }
   return null
+}
+
+function mergeSavedReportIntoDoc (saved, doc, feedbackOverride = null) {
+  const patch = {
+    reportId: saved?.reportId,
+    isPersisted: true,
+    savedAt: saved?.updatedAt || saved?.createdAt || new Date().toISOString(),
+    createdBy: saved?.createdBy || doc.createdBy || null,
+    uploadedBy: saved?.createdBy || doc.uploadedBy || doc.createdBy || null,
+    sourceGcsPath: saved?.sourceGcsPath || doc.sourceGcsPath || null,
+    scanImageUrls: saved?.scanImageUrls || doc.scanImageUrls || null,
+    size: saved?.fileSizeBytes || doc.size || 0,
+    attachmentName: saved?.originalFileName || doc.attachmentName || doc.name || null,
+  }
+
+  if (saved?.feedback) {
+    const mappedAttachments = mapFeedbackAttachments(saved.feedback)
+    patch.userFeedback = {
+      ...(doc.userFeedback || {}),
+      ...(feedbackOverride || {}),
+      sentiment: saved.feedback.helpful ? 'up' : saved.feedback.notHelpful ? 'down' : null,
+      comment: saved.feedback.comments || '',
+      attachments: mappedAttachments.length ? mappedAttachments : (doc.userFeedback?.attachments || []),
+      submittedAt: saved.updatedAt || doc.userFeedback?.submittedAt || new Date().toISOString(),
+      updatedAt: saved.updatedAt || new Date().toISOString(),
+    }
+  } else if (feedbackOverride) {
+    patch.userFeedback = { ...doc.userFeedback, ...feedbackOverride }
+  }
+
+  if (saved?.originalFileName) {
+    patch.attachmentName = saved.originalFileName
+  }
+
+  if (saved?.patientName) {
+    patch.name = `${saved.patientName} — ${saved?.classification?.type || doc.analysis?.classification?.type || 'Report'}`
+  }
+
+  return patch
 }
 
 export function useReports ({
@@ -150,7 +199,6 @@ export function useReports ({
         : baseDoc
 
       if (doc.reportId && !withFeedback) return doc.reportId
-      if (doc.reportId && withFeedback) return doc.reportId
 
       const token = await resolveApiAuthTokenWithRetry()
       if (!token) {
@@ -159,20 +207,21 @@ export function useReports ({
       }
 
       try {
+        if (doc.reportId && withFeedback) {
+          const payload = documentToFeedbackPayload(doc, feedbackOverride)
+          const files = collectFeedbackAttachmentFiles(doc)
+          const saved = await updateReportApi(doc.reportId, payload, files)
+          updateDocument(docId, mergeSavedReportIntoDoc(saved, doc, feedbackOverride))
+          return doc.reportId
+        }
+
         const payload = documentToReportPayload(doc)
-        const files = []
-        if (doc.file) files.push(doc.file)
-        if (Array.isArray(doc.bundleFiles)) files.push(...doc.bundleFiles)
+        const files = collectInitialReportFiles(doc)
         const saved = await saveReportApi(payload, files)
         const reportId = saved?.reportId
 
         if (reportId) {
-          updateDocument(docId, {
-            reportId,
-            isPersisted: true,
-            savedAt: saved.updatedAt || saved.createdAt || new Date().toISOString(),
-            ...(feedbackOverride ? { userFeedback: doc.userFeedback } : {}),
-          })
+          updateDocument(docId, mergeSavedReportIntoDoc(saved, doc, feedbackOverride))
         }
 
         return reportId || null

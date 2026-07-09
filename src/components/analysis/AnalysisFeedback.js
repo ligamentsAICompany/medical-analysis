@@ -163,10 +163,13 @@ export function AnalysisFeedbackSection ({ doc, showTitle = true, pageTitle = nu
         updatedAt: new Date().toISOString(),
       }
       const reportId = await persistReport(doc.id, { withFeedback: true, feedbackOverride })
-      if (!reportId) return
+      if (!reportId) {
+        addToast('Could not save report — try again from the analysis list', 'error')
+        return
+      }
 
       addToast(
-        !doc.reportId ? 'Feedback and report saved' : 'Feedback submitted',
+        doc.reportId ? 'Feedback submitted' : 'Report saved with feedback',
         'success'
       )
       router.push('/analysis')

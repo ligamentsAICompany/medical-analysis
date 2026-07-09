@@ -201,8 +201,10 @@ export function isAllowedGeminiVisionMime (mime) {
  */
 export function isVisionStudyDoc (doc) {
   if (!doc) return false
-  if (doc.isImageBundle) return true
+  if (doc.isImageBundle || doc.isZipArchive) return true
   if (doc.analysis?.imageAnalysis) return true
+  if (doc.analysis?.classification?.type === 'Imaging Report') return true
+  if (isZipFile({ type: doc.fileType, name: doc.name })) return true
   if (doc.fileType?.startsWith('image/')) return true
   return isDicomFile({ type: doc.fileType, name: doc.name })
 }

@@ -177,6 +177,46 @@ export async function saveReport (payload, files = []) {
 
 /**
  * @param {string} reportId
+ * @param {{ helpful?: boolean, notHelpful?: boolean, feedback?: string }} payload
+ * @param {File[]} [files]
+ * @returns {Promise<object>}
+ */
+export async function updateReport (reportId, payload, files = []) {
+  const hasFiles = Array.isArray(files) && files.length > 0
+  let res
+  try {
+    if (hasFiles) {
+      const form = new FormData()
+      form.append('report', JSON.stringify(payload))
+      files.forEach((file) => {
+        if (file) form.append('files', file)
+      })
+      res = await fetch(getReportApiUrl(reportId), {
+        method: 'PATCH',
+        headers: await authHeaders(),
+        body: form,
+      })
+    } else {
+      res = await fetch(getReportApiUrl(reportId), {
+        method: 'PATCH',
+        headers: {
+          ...(await authHeaders()),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+    }
+  } catch (err) {
+    console.error('updateReport failed', err)
+    throw new Error('Could not reach reports API')
+  }
+
+  const rawText = await res.text()
+  return parseReportsResponse(res, rawText)
+}
+
+/**
+ * @param {string} reportId
  * @returns {Promise<object>}
  */
 export async function deleteReport (reportId) {

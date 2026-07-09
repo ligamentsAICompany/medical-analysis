@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useCallback, useContext } from 'react';
 import { useDocuments } from '../hooks/useDocuments';
 import { useToast } from '../hooks/useToast';
 import { useAnalysis } from '../hooks/useAnalysis';
@@ -20,6 +20,16 @@ export function MedDocsProvider({ children }) {
     updateDocument,
     deleteDocument,
   } = useDocuments();
+
+  const displayOwner = user?.name || user?.email || null;
+
+  const addDocumentWithOwner = useCallback((file) => {
+    return addDocument(file, { createdBy: displayOwner });
+  }, [addDocument, displayOwner]);
+
+  const addImageBundleWithOwner = useCallback((files) => {
+    return addImageBundle(files, { createdBy: displayOwner });
+  }, [addImageBundle, displayOwner]);
 
   const reports = useReports({
     documents,
@@ -44,8 +54,8 @@ export function MedDocsProvider({ children }) {
   const value = {
     documents,
     setDocuments,
-    addDocument,
-    addImageBundle,
+    addDocument: addDocumentWithOwner,
+    addImageBundle: addImageBundleWithOwner,
     updateDocument,
     deleteDocument: handleDeleteDocument,
     toasts,

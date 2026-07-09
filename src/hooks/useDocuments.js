@@ -7,6 +7,7 @@ import {
   isDicomFile,
   isGeminiVisionUpload,
   isTextBundleFile,
+  isZipFile,
   partitionClinicalBundle,
 } from '../lib/medicalFileTypes';
 
@@ -15,20 +16,23 @@ let nextId = 1;
 export function useDocuments() {
   const [documents, setDocuments] = useState([]);
 
-  const addDocument = useCallback((file) => {
+  const addDocument = useCallback((file, meta = {}) => {
     const id = `doc-${Date.now()}-${nextId++}`;
     const objectUrl = URL.createObjectURL(file);
     const fileType =
       (file.type && file.type.trim()) ||
       (isDicomFile(file) ? DICOM_MIME : file.type);
+    const isZip = isZipFile(file);
     const doc = {
       id,
       name: file.name,
+      attachmentName: file.name,
       fileType,
       size: file.size,
       uploadedAt: new Date().toISOString(),
       status: 'uploading',
       isMock: false,
+      isZipArchive: isZip,
       file,
       objectUrl,
       textContent: null,
@@ -39,6 +43,8 @@ export function useDocuments() {
       userFeedback: null,
       reportId: null,
       isPersisted: false,
+      createdBy: meta.createdBy || null,
+      uploadedBy: meta.createdBy || null,
     };
     setDocuments(prev => [doc, ...prev]);
     return id;
@@ -48,7 +54,7 @@ export function useDocuments() {
    * Several files → one document, one combined AI analysis.
    * Vision-only: multiple images/DICOM. Mixed: PDF/TXT/DOCX + imaging (same patient).
    */
-  const addImageBundle = useCallback((files) => {
+  const addImageBundle = useCallback((files, meta = {}) => {
     const id = `doc-${Date.now()}-${nextId++}`;
     const bundleObjectUrls = files.map((f) => URL.createObjectURL(f));
     const { textFiles, visionFiles, isFullPartition } = partitionClinicalBundle(files);
@@ -71,6 +77,7 @@ export function useDocuments() {
     const doc = {
       id,
       name,
+      attachmentName: primaryFile.name,
       fileType: effectiveVisionMimeType(primaryFile),
       size: totalSize,
       uploadedAt: new Date().toISOString(),
@@ -87,6 +94,8 @@ export function useDocuments() {
       userFeedback: null,
       reportId: null,
       isPersisted: false,
+      createdBy: meta.createdBy || null,
+      uploadedBy: meta.createdBy || null,
     };
     setDocuments((prev) => [doc, ...prev]);
     return id;

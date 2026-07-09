@@ -187,6 +187,7 @@ a      { text-decoration: none; }
 .col-name    { min-width: 200px; max-width: 280px; }
 .col-type    { min-width: 160px; }
 .col-patient { min-width: 140px; }
+.col-attachment { min-width: 160px; max-width: 220px; }
 .col-size    { width: 80px; }
 .col-date    { min-width: 160px; }
 .col-status  { width: 110px; }

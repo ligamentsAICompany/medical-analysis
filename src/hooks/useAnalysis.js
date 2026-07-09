@@ -14,6 +14,21 @@ import {
 } from '../lib/medicalFileTypes';
 import { analyzeFilesWithBackend, analyzeTextWithBackend } from '../lib/analyzeClient';
 
+async function saveReportAfterAnalysis (persistReport, id, addToast) {
+  if (!persistReport) return;
+  try {
+    const reportId = await persistReport(id);
+    if (reportId) {
+      addToast('Report saved', 'success', 3000);
+      return;
+    }
+    addToast('Analysis complete — sign in to save this report', 'warning', 5000);
+  } catch (err) {
+    console.error('Report save failed after analysis', err);
+    addToast(err?.message || 'Analysis saved locally but could not persist to server', 'error');
+  }
+}
+
 function mergedLabValues (analysisResult, text) {
   if (analysisResult?.labValues?.length > 0) return analysisResult.labValues;
   return parseLabValues(text || '');
@@ -73,6 +88,9 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             labValues,
           },
         }));
+        if (persistReport) {
+          await saveReportAfterAnalysis(persistReport, id, addToast);
+        }
       } catch (err) {
         console.error('Analyze API failed', err);
         addToast(err?.message || 'Analysis failed', 'error');
@@ -130,11 +148,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             ...(visionCount > 1 ? { multiImageCount: visionCount } : {}),
           },
         });
-        if (persistReport) {
-          persistReport(id).then((reportId) => {
-            if (reportId) addToast('Report saved', 'success', 3000);
-          });
-        }
+        await saveReportAfterAnalysis(persistReport, id, addToast);
       } catch (err) {
         console.error('Combined file analysis failed', err);
         updateDocument(id, { status: 'error' });
@@ -199,11 +213,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             labValues,
           },
         });
-        if (persistReport) {
-          persistReport(id).then((reportId) => {
-            if (reportId) addToast('Report saved', 'success', 3000);
-          });
-        }
+        await saveReportAfterAnalysis(persistReport, id, addToast);
       } catch (err) {
         console.error('Document analysis failed', err);
         if (isTextBundleFile(file) && text) {
@@ -217,6 +227,9 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             },
           });
           addToast(err?.message || 'Used offline heuristics — check NEXT_PUBLIC_ANALYZE_API_BASE_URL', 'warning');
+          if (persistReport) {
+            await saveReportAfterAnalysis(persistReport, id, addToast);
+          }
         } else {
           updateDocument(id, { status: 'error' });
           addToast(err?.message || 'Analysis failed', 'error');

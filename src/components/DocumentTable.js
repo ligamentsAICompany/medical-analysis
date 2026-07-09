@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Eye, BarChart2, Trash2, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { getDocumentAttachmentName } from './analysis/FeedbackAttachmentsPanel';
 
 const PAGE_SIZE = 10;
 
@@ -16,11 +17,6 @@ const TYPE_COLORS = {
   'Consent Form':      { color: '#be185d', bg: '#fce7f3' },
   'Other':             { color: '#475569', bg: '#f1f5f9' },
 };
-
-function formatBytes(b) {
-  if (b > 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + ' MB';
-  return Math.round(b / 1024) + ' KB';
-}
 
 const uploadDateFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
@@ -71,24 +67,28 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return documents.filter(d => {
+      const attachmentName = getDocumentAttachmentName(d).toLowerCase();
       const matchSearch = !q
         || d.name.toLowerCase().includes(q)
+        || attachmentName.includes(q)
         || (d.analysis?.patientName || '').toLowerCase().includes(q)
         || (d.analysis?.classification?.type || '').toLowerCase().includes(q)
-        || (isAdmin && (d.createdBy || '').toLowerCase().includes(q));
+        || (isAdmin && (d.createdBy || d.uploadedBy || '').toLowerCase().includes(q));
       const matchType = typeFilter === 'all' || d.analysis?.classification?.type === typeFilter;
       return matchSearch && matchType;
     });
-  }, [documents, search, typeFilter]);
+  }, [documents, search, typeFilter, isAdmin]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       let av, bv;
       if (sort.field === 'uploadedAt') { av = a.uploadedAt; bv = b.uploadedAt; }
       else if (sort.field === 'name') { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
-      else if (sort.field === 'patient') { av = a.analysis?.patientName || ''; bv = b.analysis?.patientName || ''; }
+      else if (sort.field === 'attachment') {
+        av = getDocumentAttachmentName(a).toLowerCase();
+        bv = getDocumentAttachmentName(b).toLowerCase();
+      }
       else if (sort.field === 'type') { av = a.analysis?.classification?.type || ''; bv = b.analysis?.classification?.type || ''; }
-      else if (sort.field === 'size') { av = a.size; bv = b.size; }
       if (av < bv) return sort.dir === 'asc' ? -1 : 1;
       if (av > bv) return sort.dir === 'asc' ? 1 : -1;
       return 0;
@@ -97,6 +97,7 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageData = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const colCount = isAdmin ? 8 : 7;
 
   const toggleSort = (field) => {
     setSort(s => s.field === field ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' });
@@ -105,13 +106,12 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
 
   return (
     <div className="doc-table-wrap">
-      {/* Toolbar */}
       <div className="doc-table-toolbar">
         <div className="search-box">
           <Search size={15} className="search-icon" />
           <input
             className="search-input"
-            placeholder="Search by name, patient, type…"
+            placeholder="Search by report, attachment, type…"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
@@ -130,29 +130,23 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
         <span className="doc-count">{filtered.length} document{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Table */}
       <div className="table-scroll">
         <table className="doc-table">
           <thead>
             <tr>
               <th className="col-num">#</th>
               <th className="col-name sortable" onClick={() => toggleSort('name')}>
-                File Name <SortIcon field="name" sort={sort} />
+                Report <SortIcon field="name" sort={sort} />
               </th>
               <th className="col-type sortable" onClick={() => toggleSort('type')}>
                 Document Type <SortIcon field="type" sort={sort} />
               </th>
-              <th className="col-patient sortable" onClick={() => toggleSort('patient')}>
-                Patient <SortIcon field="patient" sort={sort} />
+              <th className="col-attachment sortable" onClick={() => toggleSort('attachment')}>
+                Attachment <SortIcon field="attachment" sort={sort} />
               </th>
               {isAdmin ? (
-                <th className="col-owner">
-                  Uploaded by
-                </th>
+                <th className="col-owner">Uploaded by</th>
               ) : null}
-              <th className="col-size sortable" onClick={() => toggleSort('size')}>
-                Size <SortIcon field="size" sort={sort} />
-              </th>
               <th className="col-date sortable" onClick={() => toggleSort('uploadedAt')}>
                 Uploaded <SortIcon field="uploadedAt" sort={sort} />
               </th>
@@ -163,7 +157,7 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
           <tbody>
             {pageData.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 9 : 8} className="table-empty">
+                <td colSpan={colCount} className="table-empty">
                   <div className="table-empty-content">
                     <span style={{ fontSize: 32 }}>📂</span>
                     <p>
@@ -190,15 +184,16 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
                     <TypeBadge type={doc.analysis.classification.type} />
                   ) : '—'}
                 </td>
-                <td className="col-patient">
-                  {doc.analysis?.patientName || <span className="text-muted">—</span>}
+                <td className="col-attachment">
+                  <span className="filename" title={getDocumentAttachmentName(doc)}>
+                    {getDocumentAttachmentName(doc)}
+                  </span>
                 </td>
                 {isAdmin ? (
                   <td className="col-owner">
-                    {doc.createdBy || <span className="text-muted">—</span>}
+                    {doc.createdBy || doc.uploadedBy || <span className="text-muted">—</span>}
                   </td>
                 ) : null}
-                <td className="col-size text-muted">{formatBytes(doc.size)}</td>
                 <td className="col-date text-muted">{formatDate(doc.uploadedAt)}</td>
                 <td className="col-status"><StatusBadge status={doc.status} /></td>
                 <td className="col-actions">
@@ -237,7 +232,6 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination">
           <button

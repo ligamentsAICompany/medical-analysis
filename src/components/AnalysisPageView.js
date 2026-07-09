@@ -6,8 +6,10 @@ import { ArrowLeft, Eye, Download, Trash2, FileText, Image, Loader } from 'lucid
 import { AnalysisDocumentBody } from './analysis/AnalysisShared';
 import { ImageAnalysisView } from './analysis/ImageAnalysisView';
 import { AnalysisFeedbackSection } from './analysis/AnalysisFeedback';
+import { FeedbackAttachmentsPanel } from './analysis/FeedbackAttachmentsPanel';
 import { PageHeader } from './shell/PageHeader';
 import { isVisionStudyDoc } from '../lib/medicalFileTypes';
+import { downloadAnalysisReport } from '../lib/analysisExport';
 
 const formatFileSize = (bytes) => {
   if (bytes == null || Number.isNaN(bytes)) return '—';
@@ -45,12 +47,22 @@ export default function AnalysisPageView({
   aiLoadProgress,
   embedded = false,
 }) {
-  const downloadFile = useCallback(() => {
+  const downloadSourceFile = useCallback(() => {
     if (!doc?.objectUrl) return;
     const a = document.createElement('a');
     a.href = doc.objectUrl;
-    a.download = doc.name;
+    a.download = doc.attachmentName || doc.name;
     a.click();
+  }, [doc]);
+
+  const handleDownloadAnalysis = useCallback(() => {
+    if (!doc?.analysis) return;
+    downloadAnalysisReport(doc, 'text');
+  }, [doc]);
+
+  const handleDownloadAnalysisJson = useCallback(() => {
+    if (!doc?.analysis) return;
+    downloadAnalysisReport(doc, 'json');
   }, [doc]);
 
   const isImage = useMemo(
@@ -64,15 +76,13 @@ export default function AnalysisPageView({
     return doc.analysis?.classification?.type || 'Document';
   }, [doc, isImage]);
 
-  const ia = doc?.analysis?.imageAnalysis;
-  const classification = doc?.analysis?.classification?.type;
-  const [analysingMessageIdx, setAnalysingMessageIdx] = useState(0);
-
   const showFeedbackPanel = useMemo(() => {
     if (!doc || doc.status !== 'ready' || !doc.analysis) return false;
-    if (isImage) return Boolean(ia);
     return true;
-  }, [doc, isImage, ia]);
+  }, [doc]);
+
+  const classification = doc?.analysis?.classification?.type;
+  const [analysingMessageIdx, setAnalysingMessageIdx] = useState(0);
 
   useEffect(() => {
     if (!doc || doc.status !== 'analysing') {
@@ -123,9 +133,19 @@ export default function AnalysisPageView({
                   <Eye size={15} aria-hidden /> View document
                 </button>
               )}
-              {doc.objectUrl && !doc.isMock && (
-                <button type="button" className="btn btn--ghost" onClick={downloadFile}>
-                  <Download size={15} aria-hidden /> Download
+              {doc.analysis && doc.status === 'ready' && (
+                <>
+                  <button type="button" className="btn btn--ghost" onClick={handleDownloadAnalysis}>
+                    <Download size={15} aria-hidden /> Download analysis
+                  </button>
+                  <button type="button" className="btn btn--ghost" onClick={handleDownloadAnalysisJson}>
+                    <FileText size={15} aria-hidden /> Export JSON
+                  </button>
+                </>
+              )}
+              {doc.objectUrl && !doc.isMock && doc.objectUrl.startsWith('blob:') && (
+                <button type="button" className="btn btn--ghost" onClick={downloadSourceFile}>
+                  <Download size={15} aria-hidden /> Download source
                 </button>
               )}
               <button
@@ -151,7 +171,12 @@ export default function AnalysisPageView({
                 <ImageAnalysisView doc={doc} />
               ) : (
                 <div className="analysis-page__body-inner">
-                  <p className="text-muted">No image analysis available.</p>
+                  <AnalysisDocumentBody
+                    doc={doc}
+                    onEnhanceAI={onEnhanceAI}
+                    aiLoading={aiLoading}
+                    aiLoadProgress={aiLoadProgress}
+                  />
                 </div>
               )
             ) : (
@@ -169,6 +194,12 @@ export default function AnalysisPageView({
               className="analysis-feedback-standalone"
               aria-labelledby={`analysis-feedback-heading-${doc.id}`}
             >
+              {doc.userFeedback?.attachments?.some((att) => att.url || att.objectUrl) ? (
+                <FeedbackAttachmentsPanel
+                  attachments={doc.userFeedback.attachments}
+                  title="Submitted feedback attachments"
+                />
+              ) : null}
               <AnalysisFeedbackSection
                 doc={doc}
                 showTitle={false}
