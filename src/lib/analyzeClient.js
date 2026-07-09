@@ -129,7 +129,7 @@ function uploadToGCS (file, uploadUrl, onProgress) {
 
 /**
  * Trigger analysis after a file has been uploaded to GCS.
- * @param {string} gcsPath  e.g. "gs://nandico_dcm/mri-uploads/<uuid>.zip"
+ * @param {string} gcsPath  e.g. "gs://medical-analysis/mri-uploads/<uuid>.zip"
  * @returns {Promise<object>} normalised analysis
  */
 async function analyzeGcs (gcsPath) {

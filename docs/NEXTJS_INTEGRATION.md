@@ -204,7 +204,7 @@ Get a signed GCS URL for large ZIP uploads.
 ```json
 {
   "upload_url": "https://storage.googleapis.com/...",
-  "gcs_path": "gs://nandico_dcm/mri-uploads/<uuid>.zip"
+  "gcs_path": "gs://medical-analysis/mri-uploads/<uuid>.zip"
 }
 ```
 - **Note:** Signed URL expires in **1 hour**
@@ -226,7 +226,7 @@ Trigger analysis after GCS upload.
 - **Body:**
 ```json
 {
-  "gcs_path": "gs://nandico_dcm/mri-uploads/<uuid>.zip"
+  "gcs_path": "gs://medical-analysis/mri-uploads/<uuid>.zip"
 }
 ```
 - **Response:** `AnalysisResponse`
