@@ -21,7 +21,7 @@ export function MedDocsProvider({ children }) {
     deleteDocument,
   } = useDocuments();
 
-  const displayOwner = user?.name || user?.email || null;
+  const displayOwner = user?.email || null;
 
   const addDocumentWithOwner = useCallback((file) => {
     return addDocument(file, { createdBy: displayOwner });
