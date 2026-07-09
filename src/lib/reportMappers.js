@@ -100,5 +100,6 @@ export function documentToReportPayload (doc) {
     notHelpful: fb.sentiment === 'down',
     feedback: fb.comment || '',
     scanImageUrls: doc.scanImageUrls || (doc.objectUrl ? [doc.objectUrl] : []),
+    sourceGcsPath: doc.sourceGcsPath || null,
   }
 }

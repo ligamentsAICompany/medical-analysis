@@ -104,7 +104,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
       try {
         const textBlocks = await Promise.all(files.map((f) => optionalExtractedText(f)));
         const textContent = textBlocks.filter(Boolean).join(' · ');
-        const { analysis: nextAnalysis } = await analyzeFilesWithBackend(
+        const { analysis: nextAnalysis, gcsPath } = await analyzeFilesWithBackend(
           files,
           (phase, pct) => {
             if (phase === 'uploading') {
@@ -123,6 +123,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
         updateDocument(id, {
           status: 'ready',
           textContent: textContent || null,
+          sourceGcsPath: gcsPath || null,
           analysis: {
             ...nextAnalysis,
             labValues: nextAnalysis.labValues?.length ? nextAnalysis.labValues : [],
@@ -173,7 +174,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
 
       setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0 });
       try {
-        const { analysis: nextAnalysis } = await analyzeFilesWithBackend(
+        const { analysis: nextAnalysis, gcsPath } = await analyzeFilesWithBackend(
           [file],
           (phase, pct) => {
             if (phase === 'uploading') {
@@ -192,6 +193,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
         updateDocument(id, {
           status: 'ready',
           textContent: text || null,
+          sourceGcsPath: gcsPath || null,
           analysis: {
             ...nextAnalysis,
             labValues,

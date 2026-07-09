@@ -160,7 +160,10 @@ export function useReports ({
 
       try {
         const payload = documentToReportPayload(doc)
-        const saved = await saveReportApi(payload)
+        const files = []
+        if (doc.file) files.push(doc.file)
+        if (Array.isArray(doc.bundleFiles)) files.push(...doc.bundleFiles)
+        const saved = await saveReportApi(payload, files)
         const reportId = saved?.reportId
 
         if (reportId) {

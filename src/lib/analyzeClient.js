@@ -185,7 +185,7 @@ export async function analyzeFilesWithBackend (files, onProgress) {
     // Step 3: trigger analysis
     const analysis = await analyzeGcs(gcs_path);
     console.log('[analyze files] GCS analysis OK');
-    return { analysis };
+    return { analysis, gcsPath: gcs_path };
   }
 
   // Direct multipart path for small files and all non-ZIP types

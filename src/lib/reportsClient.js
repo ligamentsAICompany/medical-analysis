@@ -135,21 +135,37 @@ export async function fetchReportById (reportId) {
  *   helpful?: boolean,
  *   notHelpful?: boolean,
  *   feedback?: string,
- *   scanImageUrls?: string[]
+ *   scanImageUrls?: string[],
+ *   sourceGcsPath?: string | null
  * }} payload
+ * @param {File[]} [files]
  * @returns {Promise<object>}
  */
-export async function saveReport (payload) {
+export async function saveReport (payload, files = []) {
+  const hasFiles = Array.isArray(files) && files.length > 0
   let res
   try {
-    res = await fetch(getReportsApiUrl(), {
-      method: 'POST',
-      headers: {
-        ...(await authHeaders()),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+    if (hasFiles) {
+      const form = new FormData()
+      form.append('report', JSON.stringify(payload))
+      files.forEach((file) => {
+        if (file) form.append('files', file)
+      })
+      res = await fetch(getReportsApiUrl(), {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: form,
+      })
+    } else {
+      res = await fetch(getReportsApiUrl(), {
+        method: 'POST',
+        headers: {
+          ...(await authHeaders()),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+    }
   } catch (err) {
     console.error('saveReport failed', err)
     throw new Error('Could not reach reports API')
