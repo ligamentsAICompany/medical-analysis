@@ -88,10 +88,16 @@ export function useReports ({
   const [reportsLoaded, setReportsLoaded] = useState(false)
   const prevUserIdRef = useRef(null)
   const loadSeqRef = useRef(0)
+  const documentsRef = useRef(documents)
+
+  useEffect(() => {
+    documentsRef.current = documents
+  }, [documents])
 
   const loadReports = useCallback(async ({ silent = false } = {}) => {
     const seq = loadSeqRef.current + 1
     loadSeqRef.current = seq
+    const requestedUserId = prevUserIdRef.current
 
     const token = await resolveApiAuthTokenWithRetry()
     if (!token) {
@@ -105,12 +111,23 @@ export function useReports ({
     try {
       const reports = await fetchUserReports()
       if (loadSeqRef.current !== seq) return true
+      // User switched away while the request was in flight
+      if (requestedUserId && prevUserIdRef.current !== requestedUserId) return true
 
-      const persisted = (reports || []).map(reportToDocument)
-      const seen = new Set()
+      const list = Array.isArray(reports) ? reports : []
+      const persisted = []
+      for (const report of list) {
+        try {
+          const doc = reportToDocument(report)
+          if (doc?.reportId) persisted.push(doc)
+        } catch (err) {
+          console.error('Failed to map report row', report?.reportId || report?.id, err)
+        }
+      }
 
       setDocuments((prev) => {
         const sessionDocs = prev.filter((d) => !d.isPersisted && !d.reportId)
+        const seen = new Set()
         const uniquePersisted = persisted.filter((d) => {
           if (!d.reportId || seen.has(d.reportId)) return false
           seen.add(d.reportId)
@@ -146,9 +163,7 @@ export function useReports ({
 
     const userChanged = prevUserIdRef.current !== userId
     if (userChanged) {
-      if (prevUserIdRef.current) {
-        setDocuments([])
-      }
+      // Keep previous rows until the new fetch lands (avoids empty flash / race clears)
       prevUserIdRef.current = userId
       setReportsLoaded(false)
     }
@@ -182,16 +197,25 @@ export function useReports ({
 
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return
-      loadReports({ silent: documents.length > 0 })
+      // Always silent refresh so we never flash an empty table
+      loadReports({ silent: true })
     }
 
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [isAuthenticated, authLoading, userId, loadReports, documents.length])
+  }, [isAuthenticated, authLoading, userId, loadReports])
 
   const persistReport = useCallback(
-    async (docId, { withFeedback = false, feedbackOverride = null } = {}) => {
-      const baseDoc = documents.find((d) => d.id === docId)
+    async (docId, {
+      withFeedback = false,
+      feedbackOverride = null,
+      docOverride = null,
+    } = {}) => {
+      const existing = documentsRef.current.find((d) => d.id === docId) || null
+      const baseDoc = docOverride
+        ? { ...(existing || {}), ...docOverride, id: docId }
+        : existing
+
       if (!baseDoc?.analysis || baseDoc.status !== 'ready') return null
 
       const doc = feedbackOverride
@@ -231,7 +255,7 @@ export function useReports ({
         return null
       }
     },
-    [addToast, documents, updateDocument]
+    [addToast, updateDocument]
   )
 
   const loadReport = useCallback(

@@ -14,10 +14,11 @@ import {
 } from '../lib/medicalFileTypes';
 import { analyzeFilesWithBackend, analyzeTextWithBackend } from '../lib/analyzeClient';
 
-async function saveReportAfterAnalysis (persistReport, id, addToast) {
+async function saveReportAfterAnalysis (persistReport, id, addToast, docOverride = null) {
   if (!persistReport) return;
   try {
-    const reportId = await persistReport(id);
+    // Pass docOverride so save uses the just-finished analysis (React state may still be stale)
+    const reportId = await persistReport(id, docOverride ? { docOverride } : {});
     if (reportId) {
       addToast('Report saved', 'success', 3000);
       return;
@@ -82,14 +83,18 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
           filename: fileName || '',
         });
         const labValues = mergedLabValues(nextAnalysis, text);
-        updateDocument(id, (doc) => ({
+        const patch = {
+          status: 'ready',
           analysis: {
             ...nextAnalysis,
             labValues,
           },
+        };
+        updateDocument(id, (doc) => ({
+          ...patch,
         }));
         if (persistReport) {
-          await saveReportAfterAnalysis(persistReport, id, addToast);
+          await saveReportAfterAnalysis(persistReport, id, addToast, patch);
         }
       } catch (err) {
         console.error('Analyze API failed', err);
@@ -138,7 +143,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
           }
         );
         const visionCount = files.filter((f) => isGeminiVisionUpload(f)).length;
-        updateDocument(id, {
+        const patch = {
           status: 'ready',
           textContent: textContent || null,
           sourceGcsPath: gcsPath || null,
@@ -147,8 +152,9 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             labValues: nextAnalysis.labValues?.length ? nextAnalysis.labValues : [],
             ...(visionCount > 1 ? { multiImageCount: visionCount } : {}),
           },
-        });
-        await saveReportAfterAnalysis(persistReport, id, addToast);
+        };
+        updateDocument(id, patch);
+        await saveReportAfterAnalysis(persistReport, id, addToast, patch);
       } catch (err) {
         console.error('Combined file analysis failed', err);
         updateDocument(id, { status: 'error' });
@@ -204,7 +210,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
           }
         );
         const labValues = mergedLabValues(nextAnalysis, text);
-        updateDocument(id, {
+        const patch = {
           status: 'ready',
           textContent: text || null,
           sourceGcsPath: gcsPath || null,
@@ -212,23 +218,25 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             ...nextAnalysis,
             labValues,
           },
-        });
-        await saveReportAfterAnalysis(persistReport, id, addToast);
+        };
+        updateDocument(id, patch);
+        await saveReportAfterAnalysis(persistReport, id, addToast, patch);
       } catch (err) {
         console.error('Document analysis failed', err);
         if (isTextBundleFile(file) && text) {
           const fallback = analyzeDocument(text || file.name);
-          updateDocument(id, {
+          const patch = {
             status: 'ready',
             textContent: text || null,
             analysis: {
               ...fallback,
               summary: `${fallback.summary}\n\n(Analysis API unavailable: ${err?.message || 'unknown error'})`,
             },
-          });
+          };
+          updateDocument(id, patch);
           addToast(err?.message || 'Used offline heuristics — check NEXT_PUBLIC_ANALYZE_API_BASE_URL', 'warning');
           if (persistReport) {
-            await saveReportAfterAnalysis(persistReport, id, addToast);
+            await saveReportAfterAnalysis(persistReport, id, addToast, patch);
           }
         } else {
           updateDocument(id, { status: 'error' });

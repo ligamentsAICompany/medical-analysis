@@ -3,9 +3,24 @@ import { isZipFile } from './medicalFileTypes'
 
 function normalizeTimestamp (value) {
   if (!value) return new Date().toISOString()
-  if (typeof value === 'string') return value
-  if (typeof value === 'object' && value._seconds != null) {
-    return new Date(value._seconds * 1000).toISOString()
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
+  }
+  if (typeof value === 'object') {
+    if (value._seconds != null) {
+      return new Date(value._seconds * 1000).toISOString()
+    }
+    if (value.seconds != null) {
+      return new Date(Number(value.seconds) * 1000).toISOString()
+    }
+    if (typeof value.toDate === 'function') {
+      try {
+        return value.toDate().toISOString()
+      } catch {
+        /* fall through */
+      }
+    }
   }
   return new Date().toISOString()
 }
@@ -19,16 +34,19 @@ function isImagingReport (analysis, originalFileName) {
 
 function mapFeedbackAttachments (feedback) {
   const fb = feedback || {}
-  return (fb.attachments || []).map((att) => ({
-    id: att.id,
-    name: att.name,
-    size: att.size || 0,
-    fileType: att.contentType || att.fileType || '',
-    contentType: att.contentType || att.fileType || '',
-    objectUrl: att.url || '',
-    url: att.url || '',
-    gcsPath: att.gcsPath || null,
-  }))
+  const raw = Array.isArray(fb.attachments) ? fb.attachments : []
+  return raw
+    .filter((att) => att && typeof att === 'object')
+    .map((att, index) => ({
+      id: att.id || `fb-att-${index}`,
+      name: att.name || 'Attachment',
+      size: att.size || 0,
+      fileType: att.contentType || att.fileType || '',
+      contentType: att.contentType || att.fileType || '',
+      objectUrl: att.url || '',
+      url: att.url || '',
+      gcsPath: att.gcsPath || null,
+    }))
 }
 
 /**

@@ -138,9 +138,9 @@ export default function AnalysisPageView({
                   <button type="button" className="btn btn--ghost" onClick={handleDownloadAnalysis}>
                     <Download size={15} aria-hidden /> Download analysis
                   </button>
-                  <button type="button" className="btn btn--ghost" onClick={handleDownloadAnalysisJson}>
+                  {/* <button type="button" className="btn btn--ghost" onClick={handleDownloadAnalysisJson}>
                     <FileText size={15} aria-hidden /> Export JSON
-                  </button>
+                  </button> */}
                 </>
               )}
               {doc.objectUrl && !doc.isMock && doc.objectUrl.startsWith('blob:') && (

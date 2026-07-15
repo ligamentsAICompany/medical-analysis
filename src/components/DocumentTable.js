@@ -67,9 +67,10 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return documents.filter(d => {
-      const attachmentName = getDocumentAttachmentName(d).toLowerCase();
+      const name = String(d?.name || '').toLowerCase();
+      const attachmentName = String(getDocumentAttachmentName(d) || '').toLowerCase();
       const matchSearch = !q
-        || d.name.toLowerCase().includes(q)
+        || name.includes(q)
         || attachmentName.includes(q)
         || (d.analysis?.patientName || '').toLowerCase().includes(q)
         || (d.analysis?.classification?.type || '').toLowerCase().includes(q)
