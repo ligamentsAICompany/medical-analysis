@@ -51,12 +51,36 @@ export default function AnalysisPageView({
   const { user } = useAuth();
   const canReview = user?.role === 'CLINICIAN' || user?.isAdmin;
 
-  const downloadSourceFile = useCallback(() => {
+  const downloadSourceFile = useCallback(async () => {
     if (!doc?.objectUrl) return;
-    const a = document.createElement('a');
-    a.href = doc.objectUrl;
-    a.download = doc.attachmentName || doc.name;
-    a.click();
+    const filename = doc.attachmentName || doc.name;
+
+    // blob: URLs (freshly uploaded, same tab) already work with a plain anchor click.
+    if (doc.objectUrl.startsWith('blob:')) {
+      const a = document.createElement('a');
+      a.href = doc.objectUrl;
+      a.download = filename;
+      a.click();
+      return;
+    }
+
+    // Persisted reports have a real GCS https:// URL — the anchor `download`
+    // attribute is ignored cross-origin, so fetch the bytes ourselves and
+    // download from a same-origin blob URL instead.
+    try {
+      const res = await fetch(doc.objectUrl);
+      if (!res.ok) throw new Error(`Failed to fetch source file (${res.status})`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('downloadSourceFile failed, opening in a new tab instead', err);
+      window.open(doc.objectUrl, '_blank', 'noopener');
+    }
   }, [doc]);
 
   const handleDownloadAnalysis = useCallback(() => {
@@ -147,7 +171,7 @@ export default function AnalysisPageView({
                   </button> */}
                 </>
               )}
-              {doc.objectUrl && !doc.isMock && doc.objectUrl.startsWith('blob:') && (
+              {doc.objectUrl && !doc.isMock && (
                 <button type="button" className="btn btn--ghost" onClick={downloadSourceFile}>
                   <Download size={15} aria-hidden /> Download source
                 </button>
