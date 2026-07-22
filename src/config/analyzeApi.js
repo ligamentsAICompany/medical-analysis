@@ -87,6 +87,15 @@ export function getReportApiUrl (reportId) {
 }
 
 /**
+ * Full URL for a report's structured corrections (clinician feedback).
+ * @param {string} reportId
+ * @returns {string}
+ */
+export function getReportCorrectionsApiUrl (reportId) {
+  return `${getReportApiUrl(reportId)}/corrections`
+}
+
+/**
  * Bearer token for authenticated backend routes (reports API).
  * Use a Firebase ID token in production; `dummy_token` works for local backend dev.
  * @returns {string}

@@ -1103,3 +1103,196 @@ html[data-theme='dark'] .feedback-attachments-panel__item {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* Clinician review / corrections UI */
+
+.review-page__header {
+  margin-bottom: 20px;
+}
+.review-page__header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.review-analysis-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-classification,
+.review-field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.review-field-row--add {
+  margin-top: 10px;
+}
+
+.review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-list__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ui-glass-soft, rgba(0, 0, 0, 0.03));
+}
+
+.review-flag-anchor {
+  position: relative;
+  display: inline-flex;
+}
+.review-flag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.review-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 300px;
+  max-width: 80vw;
+  background: var(--ui-glass-strong, #fff);
+  border: 1px solid var(--ui-glass-border, rgba(0, 0, 0, 0.1));
+  border-radius: 14px;
+  box-shadow: var(--ui-shadow-soft, 0 8px 30px rgba(0, 0, 0, 0.15));
+  padding: 12px;
+}
+.review-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.review-popover__title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.review-popover__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ui-text-muted);
+}
+.review-popover__field-path {
+  font-size: 11px;
+  color: var(--ui-text-muted);
+  font-family: monospace;
+  margin: 0 0 8px;
+}
+.review-popover__original {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--ui-text-muted);
+}
+.review-popover__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.review-popover__label textarea,
+.review-popover__label input {
+  border-radius: 8px;
+  border: 1px solid var(--ui-glass-border, rgba(0, 0, 0, 0.15));
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.review-popover__error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.review-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.review-entity-group {
+  margin-bottom: 12px;
+}
+.review-entity-group__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ui-text-muted);
+  margin-bottom: 6px;
+}
+.review-entity-group__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.review-entity-group__chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.review-corrections-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-corrections-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ui-glass-soft, rgba(0, 0, 0, 0.03));
+  font-size: 13px;
+}
+.review-corrections-list__path {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--ui-text-muted);
+}
+.review-corrections-list__type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.review-corrections-list__type--incorrect { background: #fee2e2; color: #dc2626; }
+.review-corrections-list__type--missing { background: #dcfce7; color: #15803d; }
+.review-corrections-list__type--extra { background: #fef3c7; color: #b45309; }
+.review-corrections-list__note {
+  font-style: italic;
+  color: var(--ui-text-muted);
+}
+.review-corrections-list__by {
+  color: var(--ui-text-muted);
+  font-size: 11px;
+}
+
+.lab-review-col {
+  text-align: center;
+}

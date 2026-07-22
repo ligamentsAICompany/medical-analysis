@@ -145,6 +145,7 @@ export function UserFormModal ({
             <span>Role</span>
             <select value={form.role} onChange={handleChange('role')} disabled={isSelf}>
               <option value="USER">User</option>
+              <option value="CLINICIAN">Clinician</option>
               <option value="ADMIN">Admin</option>
             </select>
           </label>

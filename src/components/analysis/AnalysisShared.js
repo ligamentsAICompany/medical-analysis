@@ -18,11 +18,11 @@ export function ConfidenceBar({ value }) {
   );
 }
 
-function EntityChip({ label, color, bg }) {
+export function EntityChip({ label, color, bg }) {
   return <span className="entity-chip" style={{ color, background: bg }}>{label}</span>;
 }
 
-const ENTITY_STYLES = {
+export const ENTITY_STYLES = {
   persons:       { color: '#1d4ed8', bg: '#dbeafe', prefix: '👤' },
   dates:         { color: '#15803d', bg: '#dcfce7', prefix: '📅' },
   organizations: { color: '#b45309', bg: '#fef3c7', prefix: '🏥' },
@@ -30,7 +30,7 @@ const ENTITY_STYLES = {
   locations:     { color: '#0f766e', bg: '#ccfbf1', prefix: '📍' },
 };
 
-const ENTITY_LABELS = {
+export const ENTITY_LABELS = {
   persons: 'People', dates: 'Dates', organizations: 'Organizations',
   medications: 'Medications', locations: 'Locations',
 };
@@ -42,7 +42,7 @@ const ANALYSING_MESSAGES = [
   'From data to care action…',
 ];
 
-function Section({ title, children, defaultOpen = true, badge }) {
+export function Section({ title, children, defaultOpen = true, badge }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="panel-section analysis-bento__section analysis-panel-card">
@@ -58,7 +58,7 @@ function Section({ title, children, defaultOpen = true, badge }) {
   );
 }
 
-function LabResultsTable({ labValues }) {
+export function LabResultsTable({ labValues, onFlagRow }) {
   const [showAll, setShowAll] = useState(false);
   if (!labValues?.length) return <p className="text-muted">No structured lab values detected.</p>;
 
@@ -81,6 +81,7 @@ function LabResultsTable({ labValues }) {
             <th>Unit</th>
             <th>Reference</th>
             <th>Flag</th>
+            {onFlagRow && <th className="lab-review-col">Review</th>}
           </tr>
         </thead>
         <tbody>
@@ -106,6 +107,18 @@ function LabResultsTable({ labValues }) {
                     <span className="lab-flag-badge lab-flag-badge--normal">✓</span>
                   ) : '—'}
                 </td>
+                {onFlagRow && (
+                  <td className="lab-review-col">
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm review-flag-btn"
+                      onClick={() => onFlagRow(row, i)}
+                      aria-label={`Flag ${row.test} value`}
+                    >
+                      Flag
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

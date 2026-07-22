@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Eye, Download, Trash2, FileText, Image, Loader } from 'lucide-react';
+import { ArrowLeft, Eye, Download, Trash2, FileText, Image, Loader, ClipboardCheck } from 'lucide-react';
 import { AnalysisDocumentBody } from './analysis/AnalysisShared';
 import { ImageAnalysisView } from './analysis/ImageAnalysisView';
 import { AnalysisFeedbackSection } from './analysis/AnalysisFeedback';
@@ -10,6 +10,7 @@ import { FeedbackAttachmentsPanel } from './analysis/FeedbackAttachmentsPanel';
 import { PageHeader } from './shell/PageHeader';
 import { isVisionStudyDoc } from '../lib/medicalFileTypes';
 import { downloadAnalysisReport } from '../lib/analysisExport';
+import { useAuth } from '../context/AuthContext';
 
 const formatFileSize = (bytes) => {
   if (bytes == null || Number.isNaN(bytes)) return '—';
@@ -47,6 +48,9 @@ export default function AnalysisPageView({
   aiLoadProgress,
   embedded = false,
 }) {
+  const { user } = useAuth();
+  const canReview = user?.role === 'CLINICIAN' || user?.isAdmin;
+
   const downloadSourceFile = useCallback(() => {
     if (!doc?.objectUrl) return;
     const a = document.createElement('a');
@@ -147,6 +151,11 @@ export default function AnalysisPageView({
                 <button type="button" className="btn btn--ghost" onClick={downloadSourceFile}>
                   <Download size={15} aria-hidden /> Download source
                 </button>
+              )}
+              {canReview && doc.analysis && doc.status === 'ready' && (
+                <Link href={`/analysis/${doc.id}/review`} className="btn btn--ghost">
+                  <ClipboardCheck size={15} aria-hidden /> Clinician review
+                </Link>
               )}
               <button
                 type="button"
