@@ -23,12 +23,12 @@ export function MedDocsProvider({ children }) {
 
   const displayOwner = user?.email || null;
 
-  const addDocumentWithOwner = useCallback((file) => {
-    return addDocument(file, { createdBy: displayOwner });
+  const addDocumentWithOwner = useCallback((file, clinicalContext) => {
+    return addDocument(file, { createdBy: displayOwner, clinicalContext: clinicalContext || null });
   }, [addDocument, displayOwner]);
 
-  const addImageBundleWithOwner = useCallback((files) => {
-    return addImageBundle(files, { createdBy: displayOwner });
+  const addImageBundleWithOwner = useCallback((files, clinicalContext) => {
+    return addImageBundle(files, { createdBy: displayOwner, clinicalContext: clinicalContext || null });
   }, [addImageBundle, displayOwner]);
 
   const reports = useReports({

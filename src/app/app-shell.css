@@ -554,6 +554,15 @@
   cursor: not-allowed;
 }
 
+.shell-btn--success {
+  background: var(--success);
+  color: #fff;
+}
+
+.shell-btn--success:hover {
+  background: color-mix(in oklch, var(--success) 85%, black);
+}
+
 .confirm-modal {
   width: min(100%, 400px);
 }

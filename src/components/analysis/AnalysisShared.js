@@ -261,9 +261,44 @@ export function AiProgressBar({ aiLoadProgress }) {
   );
 }
 
+const CLINICAL_SEX_LABELS = {
+  male: 'Male',
+  female: 'Female',
+  unspecified: 'Prefer not to say',
+};
+
+export function ClinicalDetailsPanel({ clinicalContext }) {
+  if (!clinicalContext) return null;
+  const rows = [];
+  if (clinicalContext.patientSex) {
+    rows.push(['Sex', CLINICAL_SEX_LABELS[clinicalContext.patientSex] || clinicalContext.patientSex]);
+  }
+  if (clinicalContext.patientAge) rows.push(['Age', clinicalContext.patientAge]);
+  if (clinicalContext.presentComplaint) rows.push(['Present complaint', clinicalContext.presentComplaint]);
+  if (clinicalContext.noSignificantHistory) {
+    rows.push(['History', 'No significant previous history or surgical interventions']);
+  } else {
+    if (clinicalContext.pastHistory) rows.push(['Past history', clinicalContext.pastHistory]);
+    if (clinicalContext.priorSurgicalHistory) rows.push(['Prior surgical history', clinicalContext.priorSurgicalHistory]);
+  }
+  if (!rows.length) return null;
+  return (
+    <Section title="Clinical Details (as entered)" defaultOpen>
+      <dl className="metrics-list">
+        {rows.map(([k, v]) => (
+          <div key={k} className="metrics-row">
+            <dt className="metrics-key">{k}</dt>
+            <dd className="metrics-val">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </Section>
+  );
+}
+
 export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgress }) {
   if (!doc) return null;
-  const { analysis, textContent } = doc;
+  const { analysis, textContent, clinicalContext } = doc;
   const docType = analysis?.classification?.type || '';
   const isLabReport    = docType === 'Lab Report';
   const isImaging      = docType === 'Imaging Report';
@@ -411,19 +446,8 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
           </Section>
         </div>
 
-        {/* <aside className="analysis-bento__side">
-          {analysis?.metrics && Object.keys(analysis.metrics).length > 0 && (
-            <Section title="Patient Details" defaultOpen>
-              <dl className="metrics-list">
-                {Object.entries(analysis.metrics).map(([k, v]) => (
-                  <div key={k} className="metrics-row">
-                    <dt className="metrics-key">{k}</dt>
-                    <dd className="metrics-val">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Section>
-          )}
+        <aside className="analysis-bento__side">
+          <ClinicalDetailsPanel clinicalContext={clinicalContext} />
 
           {aiLoading && (
             <div className="ai-enhance-box ai-enhance-box--running">
@@ -473,7 +497,7 @@ export function AnalysisDocumentBody({ doc, onEnhanceAI, aiLoading, aiLoadProgre
               </button>
             </div>
           )}
-        </aside> */}
+        </aside>
       </div>
     </div>
   );

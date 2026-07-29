@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Eye, BarChart2, Trash2, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, BarChart2, Trash2, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { getDocumentAttachmentName } from './analysis/FeedbackAttachmentsPanel';
 
@@ -44,7 +44,7 @@ function SortIcon({ field, sort }) {
   return sort.dir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
 }
 
-export default function DocumentTable({ documents, onView, onAnalysis, onDelete, loading = false, isAdmin = false }) {
+export default function DocumentTable({ documents, onView, onAnalysis, onDelete, loading = false, isAdmin = false, onNewFinding, newFindingOpen = false }) {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -129,6 +129,17 @@ export default function DocumentTable({ documents, onView, onAnalysis, onDelete,
           ))}
         </div>
         <span className="doc-count">{filtered.length} document{filtered.length !== 1 ? 's' : ''}</span>
+        {onNewFinding ? (
+          <button
+            type="button"
+            className="shell-btn shell-btn--success doc-table-toolbar__new"
+            onClick={onNewFinding}
+            aria-pressed={newFindingOpen}
+          >
+            <Plus size={16} aria-hidden />
+            New finding
+          </button>
+        ) : null}
       </div>
 
       <div className="table-scroll">

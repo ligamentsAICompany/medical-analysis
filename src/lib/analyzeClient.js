@@ -8,6 +8,7 @@ import { LARGE_FILE_THRESHOLD_BYTES } from '../config/uploadLimits';
 import {
   buildAnalyzeMultipartFormData,
   buildAnalyzeTextFormData,
+  clinicalContextToPayload,
 } from './analyzeMultipart';
 import { isZipFile } from './medicalFileTypes';
 import { normalizeGeminiAnalysis } from './geminiNormalize';
@@ -130,9 +131,10 @@ function uploadToGCS (file, uploadUrl, onProgress) {
 /**
  * Trigger analysis after a file has been uploaded to GCS.
  * @param {string} gcsPath  e.g. "gs://medical-analysis/mri-uploads/<uuid>.zip"
+ * @param {object|null} [clinicalContext]
  * @returns {Promise<object>} normalised analysis
  */
-async function analyzeGcs (gcsPath) {
+async function analyzeGcs (gcsPath, clinicalContext) {
   const headers = {
     accept: 'application/json',
     'Content-Type': 'application/json',
@@ -147,7 +149,7 @@ async function analyzeGcs (gcsPath) {
     res = await fetch(getAnalyzeGcsApiUrl(), {
       method: 'POST',
       headers,
-      body: JSON.stringify({ gcs_path: gcsPath }),
+      body: JSON.stringify({ gcs_path: gcsPath, ...clinicalContextToPayload(clinicalContext) }),
     });
   } catch (err) {
     console.error('analyze-gcs request failed', err);
@@ -164,9 +166,10 @@ async function analyzeGcs (gcsPath) {
  * all other files use the direct multipart path.
  * @param {File[]} files
  * @param {(phase: 'uploading'|'analyzing', percent: number) => void} [onProgress]
+ * @param {object|null} [clinicalContext]
  * @returns {Promise<{ analysis: object }>}
  */
-export async function analyzeFilesWithBackend (files, onProgress) {
+export async function analyzeFilesWithBackend (files, onProgress, clinicalContext) {
   const zipFile = files.length === 1 && isZipFile(files[0]) ? files[0] : null;
   const usesGcsFlow = zipFile !== null && zipFile.size >= LARGE_FILE_THRESHOLD_BYTES;
 
@@ -183,13 +186,13 @@ export async function analyzeFilesWithBackend (files, onProgress) {
     console.log('[analyze files] GCS upload complete, triggering analysis');
 
     // Step 3: trigger analysis
-    const analysis = await analyzeGcs(gcs_path);
+    const analysis = await analyzeGcs(gcs_path, clinicalContext);
     console.log('[analyze files] GCS analysis OK');
     return { analysis, gcsPath: gcs_path };
   }
 
   // Direct multipart path for small files and all non-ZIP types
-  const form = buildAnalyzeMultipartFormData(files);
+  const form = buildAnalyzeMultipartFormData(files, clinicalContext);
 
   /** @type {Record<string, string>} */
   const headers = { accept: 'application/json' };

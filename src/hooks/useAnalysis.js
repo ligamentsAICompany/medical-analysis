@@ -109,7 +109,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
   );
 
   const analyzeFileBundle = useCallback(
-    async (id, files) => {
+    async (id, files, clinicalContext) => {
       if (!files?.length || files.length < 2) return;
       const selection = validateAnalyzeFileSelection(files);
       if (!selection.ok) {
@@ -140,7 +140,8 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             } else {
               setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0, phase: 'analyzing' });
             }
-          }
+          },
+          clinicalContext
         );
         const visionCount = files.filter((f) => isGeminiVisionUpload(f)).length;
         const patch = {
@@ -173,7 +174,7 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
   const analyzeMixedMediaBundle = analyzeFileBundle;
 
   const analyzeFile = useCallback(
-    async (id, file) => {
+    async (id, file, clinicalContext) => {
       updateDocument(id, { status: 'analysing' });
 
       if (!isAnalyzeUploadFile(file)) {
@@ -207,7 +208,8 @@ export function useAnalysis ({ updateDocument, addToast, persistReport }) {
             } else {
               setAiLoadProgress({ file: 'Analyze', total: 1, loaded: 0, phase: 'analyzing' });
             }
-          }
+          },
+          clinicalContext
         );
         const labValues = mergedLabValues(nextAnalysis, text);
         const patch = {

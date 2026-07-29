@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Download, Sparkles } from 'lucide-react'
 import { PageHeader } from './shell/PageHeader'
 import UploadZone from './UploadZone'
 import DocumentTable from './DocumentTable'
 import PdfViewer from './PdfViewer'
+import { ClinicalDetailsForm, EMPTY_CLINICAL_CONTEXT } from './ClinicalDetailsForm'
 import { useMedDocs } from '../context/MedDocsContext'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -19,14 +19,6 @@ import {
   MAX_DOCUMENT_FILES_PER_REQUEST,
   MAX_VISION_FILES_PER_REQUEST,
 } from '../config/uploadLimits'
-
-const SAMPLE_IMAGES = [
-  { href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_02_24%20AM.png', label: 'Imaging grid' },
-  { href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_04_37%20AM.png', label: 'Chest X-ray' },
-  { href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_05_53%20AM.png', label: 'Ultrasound' },
-  { href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_11_05%20AM.png', label: 'CT Scan' },
-  { href: '/ChatGPT%20Image%20May%205%2C%202026%2C%2004_13_05%20AM.png', label: 'MRI' },
-]
 
 export function AnalysisWorkspace () {
   const router = useRouter()
@@ -44,6 +36,8 @@ export function AnalysisWorkspace () {
   } = useMedDocs()
 
   const [viewerDoc, setViewerDoc] = useState(null)
+  const [clinicalContext, setClinicalContext] = useState(EMPTY_CLINICAL_CONTEXT)
+  const [showNewFinding, setShowNewFinding] = useState(false)
 
   useEffect(() => {
     const viewId = searchParams.get('view')
@@ -92,20 +86,20 @@ export function AnalysisWorkspace () {
       }
 
       if (arr.length >= 2) {
-        const id = addImageBundle(arr)
-        setTimeout(() => analyzeFileBundle(id, arr), 50)
+        const id = addImageBundle(arr, clinicalContext)
+        setTimeout(() => analyzeFileBundle(id, arr, clinicalContext), 50)
         router.push(`/analysis/${id}`)
         addToast(`Analysing ${arr.length} files together for one clinical report…`, 'info', 4000)
         return
       }
 
       arr.forEach((file, idx) => {
-        const id = addDocument(file)
-        setTimeout(() => analyzeFile(id, file), 50)
+        const id = addDocument(file, clinicalContext)
+        setTimeout(() => analyzeFile(id, file, clinicalContext), 50)
         if (idx === 0) router.push(`/analysis/${id}`)
       })
     },
-    [addDocument, addImageBundle, addToast, analyzeFile, analyzeFileBundle, router]
+    [addDocument, addImageBundle, addToast, analyzeFile, analyzeFileBundle, router, clinicalContext]
   )
 
   const handleDelete = useCallback((id) => {
@@ -126,33 +120,17 @@ export function AnalysisWorkspace () {
         description="Upload medical documents and imaging. AI generates structured intelligence reports."
       />
 
-      <div className="analysis-workspace__top">
-        <div className="analysis-workspace__upload">
+      {showNewFinding && (
+        <div className="analysis-workspace__new-finding">
+          <ClinicalDetailsForm
+            value={clinicalContext}
+            onChange={setClinicalContext}
+            onClear={() => setClinicalContext(EMPTY_CLINICAL_CONTEXT)}
+            onClose={() => setShowNewFinding(false)}
+          />
           <UploadZone onFiles={handleFiles} addToast={addToast} />
         </div>
-
-        <section className="samples-bento analysis-workspace__samples" aria-labelledby="samples-heading">
-          <div className="samples-bento__intro">
-            <div className="samples-bento__icon-wrap" aria-hidden>
-              <Sparkles size={18} className="samples-bento__icon" />
-            </div>
-            <div>
-              <h2 id="samples-heading" className="samples-bento__title">Sample images</h2>
-              <p className="samples-bento__lead">
-                Download a sample PNG and drop it in the upload zone.
-              </p>
-            </div>
-          </div>
-          <div className="samples-bento__grid">
-            {SAMPLE_IMAGES.map((sample) => (
-              <a key={sample.href} className="sample-link sample-link--premium" href={sample.href} download>
-                <Download size={14} aria-hidden />
-                {sample.label}
-              </a>
-            ))}
-          </div>
-        </section>
-      </div>
+      )}
 
       <div className="analysis-workspace__table">
         <DocumentTable
@@ -162,6 +140,8 @@ export function AnalysisWorkspace () {
           onDelete={handleDelete}
           loading={reportsLoading}
           isAdmin={Boolean(user?.isAdmin)}
+          onNewFinding={() => setShowNewFinding((v) => !v)}
+          newFindingOpen={showNewFinding}
         />
       </div>
 

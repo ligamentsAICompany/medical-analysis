@@ -117,6 +117,7 @@ export function reportToDocument (report) {
     patientId: report.patientId || null,
     createdBy: report.createdBy || null,
     uploadedBy: report.createdBy || null,
+    clinicalContext: report.clinicalContext || null,
   }
 }
 
@@ -149,6 +150,7 @@ export function documentToReportPayload (doc) {
       aiInsights: analysis.aiInsights || null,
       originalFileName: doc.attachmentName || doc.name || null,
       fileSizeBytes: doc.size || 0,
+      clinicalContext: doc.clinicalContext || null,
     },
     helpful: fb.sentiment === 'up',
     notHelpful: fb.sentiment === 'down',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { UploadCloud, FileText } from 'lucide-react';
 import { DICOM_MIME, DOCX_MIME, isDicomFile, isDocxFile, isZipFile, validateAnalyzeFile, validateAnalyzeFileSelection } from '../lib/medicalFileTypes';
 import {
@@ -41,7 +41,6 @@ function validate (file, addToast) {
 
 export default function UploadZone ({ onFiles, addToast }) {
   const inputRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
 
   const handleFiles = useCallback((files) => {
     const incoming = [...files];
@@ -57,22 +56,11 @@ export default function UploadZone ({ onFiles, addToast }) {
     if (valid.length) onFiles(valid);
   }, [onFiles, addToast]);
 
-  const onDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragging(false);
-    handleFiles(e.dataTransfer.files);
-  }, [handleFiles]);
-
-  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
-  const onDragLeave = () => setDragging(false);
   const onInputChange = (e) => handleFiles(e.target.files);
 
   return (
     <div
-      className={`upload-zone${dragging ? ' upload-zone--active' : ''}`}
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
+      className="upload-zone"
       onClick={() => inputRef.current?.click()}
       role="button"
       tabIndex={0}
@@ -90,12 +78,10 @@ export default function UploadZone ({ onFiles, addToast }) {
       <div className="upload-zone__icon">
         <UploadCloud size={40} strokeWidth={1.5} />
       </div>
-      <p className="upload-zone__title">
-        {dragging ? 'Drop files here' : 'Drag & drop files or click to browse'}
-      </p>
+      <p className="upload-zone__title">Click to browse files</p>
       <p className="upload-zone__sub">
         <FileText size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-        PDF, TXT, DOCX, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. ZIP archives — max {maxZipFileLabel}, one ZIP only (no mixed uploads). Drop several non-ZIP files together for one combined report (up to 8 imaging + 6 documents per request).
+        PDF, TXT, DOCX, images, DICOM (.dcm) — max {maxAnalyzeFileLabel} each. ZIP archives — max {maxZipFileLabel}, one ZIP only (no mixed uploads). Select several non-ZIP files together for one combined report (up to 8 imaging + 6 documents per request).
       </p>
     </div>
   );

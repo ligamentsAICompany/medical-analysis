@@ -45,6 +45,7 @@ export function useDocuments() {
       isPersisted: false,
       createdBy: meta.createdBy || null,
       uploadedBy: meta.createdBy || null,
+      clinicalContext: meta.clinicalContext || null,
     };
     setDocuments(prev => [doc, ...prev]);
     return id;
@@ -96,6 +97,7 @@ export function useDocuments() {
       isPersisted: false,
       createdBy: meta.createdBy || null,
       uploadedBy: meta.createdBy || null,
+      clinicalContext: meta.clinicalContext || null,
     };
     setDocuments((prev) => [doc, ...prev]);
     return id;

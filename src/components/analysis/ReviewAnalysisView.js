@@ -9,6 +9,7 @@ import {
   EntityChip,
   ENTITY_STYLES,
   ENTITY_LABELS,
+  ClinicalDetailsPanel,
 } from './AnalysisShared';
 import { submitCorrection, listCorrections } from '../../lib/correctionsClient';
 
@@ -193,6 +194,8 @@ export default function ReviewAnalysisView({ doc, addToast }) {
 
   return (
     <div className="review-analysis-view">
+      <ClinicalDetailsPanel clinicalContext={doc?.clinicalContext} />
+
       <Section title="Classification">
         <div className="review-classification">
           <span>{analysis.classification?.type || 'Unknown'}</span>
