@@ -1,6 +1,7 @@
 import {
   getFreshApiAuthToken,
   getReportApiUrl,
+  getReportDownloadApiUrl,
   getReportsApiUrl,
   getReportsMeApiUrl,
 } from '../config/analyzeApi'
@@ -122,6 +123,30 @@ export async function fetchReportById (reportId) {
     })
   } catch (err) {
     console.error('fetchReportById failed', err)
+    throw new Error('Could not reach reports API')
+  }
+
+  const rawText = await res.text()
+  return parseReportsResponse(res, rawText)
+}
+
+/**
+ * Requests a time-limited signed URL for downloading a report's original
+ * source file — the file lives in a private GCS bucket, so there is no
+ * public URL for it; the backend generates one on demand (~15 min expiry).
+ * @param {string} reportId
+ * @returns {Promise<{ downloadUrl: string, expiresInMinutes: number, filename: string|null }>}
+ */
+export async function fetchReportDownloadUrl (reportId) {
+  let res
+  try {
+    res = await fetch(getReportDownloadApiUrl(reportId), {
+      method: 'GET',
+      headers: await authHeaders(),
+      ...REPORTS_FETCH_INIT,
+    })
+  } catch (err) {
+    console.error('fetchReportDownloadUrl failed', err)
     throw new Error('Could not reach reports API')
   }
 

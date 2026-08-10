@@ -96,7 +96,16 @@ export function AssistantSidePanel () {
     }
   }, [isResizing])
 
-  const panelWidth = isMobile ? undefined : Math.min(width, maxPanelForViewport())
+  // Deliberately NOT calling maxPanelForViewport() here: it reads real
+  // window/DOM state, which differs between SSR (no window, falls back to
+  // MAX_WIDTH) and the client's very first render (real window exists
+  // immediately, before any effect runs) — that mismatch is exactly what
+  // caused a real hydration warning (server 360 vs. client 280 on a
+  // narrow viewport). `width` state is already kept correctly clamped by
+  // the mount/resize effects above; using it directly here keeps the
+  // initial server and client render identical, with the correct capped
+  // value settling in via those effects immediately after hydration.
+  const panelWidth = isMobile ? undefined : width
 
   return (
     <>

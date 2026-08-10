@@ -96,6 +96,17 @@ export function getReportCorrectionsApiUrl (reportId) {
 }
 
 /**
+ * Full URL to request a time-limited signed URL for downloading a report's
+ * original source file (the source lives in a private GCS bucket — there
+ * is no public URL for it, this is the only way to get a working link).
+ * @param {string} reportId
+ * @returns {string}
+ */
+export function getReportDownloadApiUrl (reportId) {
+  return `${getReportApiUrl(reportId)}/download`
+}
+
+/**
  * Bearer token for authenticated backend routes (reports API).
  * Use a Firebase ID token in production; `dummy_token` works for local backend dev.
  * @returns {string}

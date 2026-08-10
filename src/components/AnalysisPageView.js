@@ -10,6 +10,7 @@ import { FeedbackAttachmentsPanel } from './analysis/FeedbackAttachmentsPanel';
 import { PageHeader } from './shell/PageHeader';
 import { isVisionStudyDoc } from '../lib/medicalFileTypes';
 import { downloadAnalysisReport } from '../lib/analysisExport';
+import { fetchReportDownloadUrl } from '../lib/reportsClient';
 import { useAuth } from '../context/AuthContext';
 
 const formatFileSize = (bytes) => {
@@ -52,11 +53,17 @@ export default function AnalysisPageView({
   const canReview = user?.role === 'CLINICIAN' || user?.isAdmin;
 
   const downloadSourceFile = useCallback(async () => {
-    if (!doc?.objectUrl) return;
     const filename = doc.attachmentName || doc.name;
 
-    // blob: URLs (freshly uploaded, same tab) already work with a plain anchor click.
-    if (doc.objectUrl.startsWith('blob:')) {
+    // blob: URLs only make sense for a fresh, same-session upload that has
+    // NOT been persisted yet — they're in-memory references that die the
+    // moment the page reloads. A persisted report can still have a stale
+    // blob: URL left over in scanImageUrls from its original upload
+    // session (a separate, pre-existing bug — that value should never
+    // have been saved), so isPersisted must be checked FIRST: persisted
+    // reports always go through the backend, regardless of what
+    // doc.objectUrl looks like.
+    if (!doc?.isPersisted && doc?.objectUrl?.startsWith('blob:')) {
       const a = document.createElement('a');
       a.href = doc.objectUrl;
       a.download = filename;
@@ -64,22 +71,20 @@ export default function AnalysisPageView({
       return;
     }
 
-    // Persisted reports have a real GCS https:// URL — the anchor `download`
-    // attribute is ignored cross-origin, so fetch the bytes ourselves and
-    // download from a same-origin blob URL instead.
+    // Persisted reports: doc.objectUrl points at a scan PREVIEW image (or,
+    // per the bug above, a dead blob: URL) — never the original source
+    // file. The source lives in a private GCS bucket with no public URL,
+    // so ask the backend for a real, time-limited signed URL, then
+    // navigate to it directly (it sets Content-Disposition itself, so no
+    // manual fetch/blob dance or CORS handling is needed).
+    if (!doc?.reportId) return;
     try {
-      const res = await fetch(doc.objectUrl);
-      if (!res.ok) throw new Error(`Failed to fetch source file (${res.status})`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
+      const { downloadUrl } = await fetchReportDownloadUrl(doc.reportId);
+      if (!downloadUrl) throw new Error('Backend did not return a download URL');
+      window.location.assign(downloadUrl);
     } catch (err) {
-      console.error('downloadSourceFile failed, opening in a new tab instead', err);
-      window.open(doc.objectUrl, '_blank', 'noopener');
+      console.error('downloadSourceFile failed', err);
+      window.alert(`Could not download the source file: ${err.message || err}`);
     }
   }, [doc]);
 
@@ -171,7 +176,7 @@ export default function AnalysisPageView({
                   </button> */}
                 </>
               )}
-              {doc.objectUrl && !doc.isMock && (
+              {(doc.objectUrl || doc.reportId) && !doc.isMock && (
                 <button type="button" className="btn btn--ghost" onClick={downloadSourceFile}>
                   <Download size={15} aria-hidden /> Download source
                 </button>
