@@ -41,7 +41,7 @@ export function FeedbackAttachmentsPanel ({ attachments = [], title = 'Feedback 
   }
 
   const handleDownload = (att) => {
-    const url = getAttachmentUrl(att)
+    const url = att?.downloadUrl || getAttachmentUrl(att)
     if (!url) return
     const a = document.createElement('a')
     a.href = url
