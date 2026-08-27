@@ -16,12 +16,6 @@ export function getFirebaseConfig () {
       process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() ||
       `${FIREBASE_PROJECT_ID}.firebaseapp.com`,
     projectId: FIREBASE_PROJECT_ID,
-    storageBucket:
-      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim() ||
-      `${FIREBASE_PROJECT_ID}.appspot.com`,
-    messagingSenderId:
-      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim() || '',
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim() || '',
   }
 }
 
