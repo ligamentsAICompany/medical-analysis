@@ -17,21 +17,49 @@ import {
 } from '../lib/firebase-client';
 import { isFirebaseConfigured } from '../config/firebase';
 import { fetchUserProfile } from '../lib/reportsClient';
+import { getRegisterApiUrl } from '../config/analyzeApi';
 
 const AuthContext = createContext(null);
 
+// Two independent call sites fire this for the same sign-in: login()'s
+// explicit call and the onAuthStateChanged listener's own call (triggered
+// by the same Firebase auth state change login() just caused). Without
+// dedup this sends two concurrent POST /api/auth/login requests for the
+// same idToken on every sign-in -- reproduced directly this session as the
+// cause of an intermittent stuck "Signing in..." state (one of the two
+// concurrent requests would occasionally stall, and login()'s handleSubmit
+// awaits its own call, never resolving until it does). Caching the in-flight
+// promise per idToken means the second caller just awaits the first
+// request's result instead of firing a duplicate.
+let inFlightSessionSync = null;
+let inFlightSessionSyncToken = null;
+
 async function syncSessionCookie (idToken) {
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ idToken }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || 'Could not establish session');
+  if (inFlightSessionSync && inFlightSessionSyncToken === idToken) {
+    return inFlightSessionSync;
   }
-  return data.user;
+
+  inFlightSessionSyncToken = idToken;
+  inFlightSessionSync = (async () => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ idToken }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Could not establish session');
+    }
+    return data.user;
+  })();
+
+  try {
+    return await inFlightSessionSync;
+  } finally {
+    inFlightSessionSync = null;
+    inFlightSessionSyncToken = null;
+  }
 }
 
 async function mergeBackendProfile (baseUser, idToken) {
@@ -160,6 +188,24 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  const register = useCallback(async (name, email, password) => {
+    const res = await fetch(getRegisterApiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detail = data?.detail;
+      const message = typeof detail === 'string' ? detail : detail?.error || 'Registration failed';
+      throw new Error(message);
+    }
+    // Registration only creates the account server-side; sign in
+    // immediately after so the user lands in the same authenticated state
+    // login() produces (Firebase client state + session cookie + role).
+    return login(email, password);
+  }, [login]);
+
   const logout = useCallback(async () => {
     try {
       if (isFirebaseConfigured()) {
@@ -173,8 +219,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, refresh }),
-    [user, loading, login, logout, refresh]
+    () => ({ user, loading, login, register, logout, refresh }),
+    [user, loading, login, register, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   PiSquaresFour,
   PiChartLineUp,
+  PiChatCircleDots,
   PiUsersThree,
 } from 'react-icons/pi'
 
@@ -21,6 +22,12 @@ const NAV_ITEMS = [
     label: 'Analysis',
     icon: PiChartLineUp,
     match: (path) => path.startsWith('/analysis'),
+  },
+  {
+    href: '/chat',
+    label: 'MedGemma Beta',
+    icon: PiChatCircleDots,
+    match: (path) => path.startsWith('/chat'),
   },
   {
     href: '/users',

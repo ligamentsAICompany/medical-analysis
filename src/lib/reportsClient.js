@@ -65,26 +65,44 @@ function normalizeReportsList (raw) {
 /**
  * @returns {Promise<{ uid: string, email: string, name: string, role: string, isAdmin: boolean }|null>}
  */
+// AuthContext.js's login() and its onAuthStateChanged listener both call
+// mergeBackendProfile() -> fetchUserProfile() for the same sign-in (same
+// dual-call pattern as syncSessionCookie in AuthContext.js -- reproduced
+// directly this session as two concurrent GET /api/v1/reports/me requests
+// on a single login). Dedup to one in-flight request at a time so a slow
+// backend response is only ever waited on once, not raced twice.
+let inFlightUserProfile = null
+
 export async function fetchUserProfile () {
-  let res
-  try {
-    res = await fetch(getReportsMeApiUrl(), {
-      method: 'GET',
-      headers: await authHeaders(),
-      ...REPORTS_FETCH_INIT,
-    })
-  } catch (err) {
-    console.error('fetchUserProfile failed', err)
-    return null
-  }
+  if (inFlightUserProfile) return inFlightUserProfile
 
-  const rawText = await res.text()
-  if (!res.ok) return null
+  inFlightUserProfile = (async () => {
+    let res
+    try {
+      res = await fetch(getReportsMeApiUrl(), {
+        method: 'GET',
+        headers: await authHeaders(),
+        ...REPORTS_FETCH_INIT,
+      })
+    } catch (err) {
+      console.error('fetchUserProfile failed', err)
+      return null
+    }
+
+    const rawText = await res.text()
+    if (!res.ok) return null
+
+    try {
+      return rawText ? JSON.parse(rawText) : null
+    } catch {
+      return null
+    }
+  })()
 
   try {
-    return rawText ? JSON.parse(rawText) : null
-  } catch {
-    return null
+    return await inFlightUserProfile
+  } finally {
+    inFlightUserProfile = null
   }
 }
 

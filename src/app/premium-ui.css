@@ -782,6 +782,32 @@ html[data-theme='dark'] .analysis-page__eyebrow {
   z-index: 1;
 }
 
+.login-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--ui-text) 6%, transparent);
+}
+
+.login-mode-toggle__btn {
+  border: none;
+  background: transparent;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-text-muted, var(--ui-text));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.login-mode-toggle__btn--active {
+  background: var(--ui-accent-indigo);
+  color: white;
+}
+
 .login-card__eyebrow {
   font-size: 11px;
   font-weight: 700;

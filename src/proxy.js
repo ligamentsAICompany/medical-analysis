@@ -8,7 +8,7 @@ function isPublicPath (pathname) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
-export async function middleware (request) {
+export async function proxy (request) {
   const { pathname } = request.nextUrl
 
   if (

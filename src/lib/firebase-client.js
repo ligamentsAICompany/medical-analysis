@@ -75,7 +75,19 @@ export function subscribeToAuthState (onUser) {
 
 export async function refreshFirebaseIdToken () {
   const auth = getFirebaseAuth()
-  const user = auth?.currentUser
+  if (!auth) return null
+
+  // authStateReady() resolves once the SDK finishes restoring a persisted
+  // session from IndexedDB on page load -- without this, auth.currentUser
+  // can still be null immediately after a fresh page load/reload even for
+  // an actually-signed-in user, purely because that restoration hasn't
+  // finished yet. Reproduced directly this session: a chat upload fired
+  // right after navigating to /chat failed with "no Firebase auth token
+  // available" even though the user was genuinely signed in -- this is the
+  // race that caused it.
+  await auth.authStateReady()
+
+  const user = auth.currentUser
   if (!user) return null
 
   // getIdToken() returns a fresh token when the cached one has expired

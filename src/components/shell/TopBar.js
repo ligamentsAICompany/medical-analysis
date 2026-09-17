@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { PiList, PiMoon, PiSparkle, PiSun, PiSignOut } from 'react-icons/pi'
+import { PiList, PiMoon, PiSparkle, PiSun, PiSignOut, PiUserCircle } from 'react-icons/pi'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useAssistant } from '../../context/AssistantContext'
@@ -76,6 +76,19 @@ export function TopBar ({ onToggleSidebar, sidebarCollapsed }) {
         >
           {theme === 'dark' ? <PiSun size={18} aria-hidden /> : <PiMoon size={18} aria-hidden />}
         </button>
+
+        {!user ? (
+          <Link
+            href="/login"
+            className="shell-profile shell-profile--signed-out"
+            aria-label="Sign in or sign up"
+            title="Sign in or sign up"
+          >
+            <span className="shell-profile__avatar" aria-hidden>
+              <PiUserCircle size={22} aria-hidden />
+            </span>
+          </Link>
+        ) : null}
 
         {user ? (
           <div style={{ position: 'relative' }} ref={menuRef}>

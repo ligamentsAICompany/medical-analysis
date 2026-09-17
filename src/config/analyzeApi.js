@@ -27,6 +27,9 @@ export const ANALYZE_GCS_API_PATH = '/api/v1/analyze-gcs'
 /** Reports CRUD — requires Firebase Bearer token. */
 export const REPORTS_API_PATH = '/api/v1/reports'
 
+/** Chatbot messages + feedback — requires Firebase Bearer token. */
+export const CHAT_API_PATH = '/api/v1/chat'
+
 /**
  * @returns {string} Origin, no trailing slash (e.g. https://….run.app)
  */
@@ -70,6 +73,14 @@ export function getReportsApiUrl () {
 }
 
 /**
+ * Full URL for public, unauthenticated self-registration.
+ * @returns {string}
+ */
+export function getRegisterApiUrl () {
+  return `${getAnalyzeApiBaseUrl()}/api/v1/auth/register`
+}
+
+/**
  * Full URL for the authenticated user's profile + role.
  * @returns {string}
  */
@@ -104,6 +115,23 @@ export function getReportCorrectionsApiUrl (reportId) {
  */
 export function getReportDownloadApiUrl (reportId) {
   return `${getReportApiUrl(reportId)}/download`
+}
+
+/**
+ * Full URL for chat message list / create.
+ * @returns {string}
+ */
+export function getChatMessagesApiUrl () {
+  return `${getAnalyzeApiBaseUrl()}${CHAT_API_PATH}/messages`
+}
+
+/**
+ * Full URL for submitting feedback on a chat message.
+ * @param {string} messageId
+ * @returns {string}
+ */
+export function getChatFeedbackApiUrl (messageId) {
+  return `${getChatMessagesApiUrl()}/${encodeURIComponent(messageId)}/feedback`
 }
 
 /**

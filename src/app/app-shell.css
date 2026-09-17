@@ -73,6 +73,15 @@
   gap: 8px;
 }
 
+.shell-profile--signed-out {
+  text-decoration: none;
+}
+
+.shell-profile--signed-out .shell-profile__avatar {
+  background: color-mix(in oklch, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
 .shell-icon-btn {
   display: flex;
   align-items: center;

@@ -34,8 +34,10 @@ const FEATURES = [
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, user, loading } = useAuth();
+  const { login, register, user, loading } = useAuth();
 
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -49,34 +51,85 @@ function LoginForm() {
     }
   }, [loading, user, router, searchParams]);
 
+  const switchMode = useCallback((nextMode) => {
+    setMode(nextMode);
+    setError('');
+  }, []);
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
       setError('');
       setSubmitting(true);
       try {
-        await login(email, password);
+        if (mode === 'signup') {
+          await register(name, email, password);
+        } else {
+          await login(email, password);
+        }
         const from = searchParams.get('from');
         const safe = from && from.startsWith('/') && !from.startsWith('//') ? from : '/dashboard';
         router.replace(safe);
         router.refresh();
       } catch (err) {
-        setError(err?.message || 'Sign in failed');
+        setError(err?.message || (mode === 'signup' ? 'Sign up failed' : 'Sign in failed'));
       } finally {
         setSubmitting(false);
       }
     },
-    [email, password, login, router, searchParams]
+    [mode, name, email, password, login, register, router, searchParams]
   );
+
+  const isSignUp = mode === 'signup';
 
   return (
     <div className="login-card login-card--v2">
       <div className="login-card__head">
-        <h2 className="login-card__heading">Welcome back</h2>
-        <p className="login-card__lede">Sign in to open your MedDocs workspace.</p>
+        <div className="login-mode-toggle" role="tablist" aria-label="Sign in or sign up">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!isSignUp}
+            className={`login-mode-toggle__btn${!isSignUp ? ' login-mode-toggle__btn--active' : ''}`}
+            onClick={() => switchMode('signin')}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isSignUp}
+            className={`login-mode-toggle__btn${isSignUp ? ' login-mode-toggle__btn--active' : ''}`}
+            onClick={() => switchMode('signup')}
+          >
+            Sign up
+          </button>
+        </div>
+        <h2 className="login-card__heading">{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
+        <p className="login-card__lede">
+          {isSignUp
+            ? 'Set up a new MedDocs workspace account.'
+            : 'Sign in to open your MedDocs workspace.'}
+        </p>
       </div>
 
       <form className="login-form login-form--v2" onSubmit={handleSubmit} noValidate>
+        {isSignUp ? (
+          <label className="login-field">
+            <span className="login-field__label">Full name</span>
+            <input
+              className="login-field__input"
+              type="text"
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              aria-required
+              placeholder="Jane Doe"
+            />
+          </label>
+        ) : null}
         <label className="login-field">
           <span className="login-field__label">Work email</span>
           <input
@@ -97,11 +150,12 @@ function LoginForm() {
             className="login-field__input"
             type="password"
             name="password"
-            autoComplete="current-password"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             aria-required
+            minLength={isSignUp ? 6 : undefined}
             placeholder="••••••••"
           />
         </label>
@@ -120,12 +174,12 @@ function LoginForm() {
           {submitting ? (
             <>
               <Loader size={16} className="spin" aria-hidden />
-              Signing in…
+              {isSignUp ? 'Creating account…' : 'Signing in…'}
             </>
           ) : (
             <>
               <Shield size={16} aria-hidden />
-              Sign in
+              {isSignUp ? 'Sign up' : 'Sign in'}
             </>
           )}
         </button>

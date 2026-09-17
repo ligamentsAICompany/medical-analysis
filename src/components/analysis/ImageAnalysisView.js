@@ -295,9 +295,45 @@ function ImagePanel ({ doc }) {
 
 // ── Main export ─────────────────────────────────────────────────────────────
 
+/**
+ * The report column's content only — header, AI insights, indication,
+ * technique, findings, impression — with no image panel/source-image
+ * dependency, so it can be reused anywhere an { imageAnalysis, aiInsights }
+ * shaped analysisResponse is available without a full `doc` (e.g. chat
+ * messages, which don't carry the same image-bundle preview data as an
+ * uploaded Analysis doc).
+ */
+export function AnalysisReportBody({ analysisResponse }) {
+  const ia = analysisResponse?.imageAnalysis;
+  const aiInsights = analysisResponse?.aiInsights;
+  if (!ia) return null;
+
+  return (
+    <div className="img-report__sections">
+      <ReportHeader imageAnalysis={ia} />
+      <AiInsightsSection aiInsights={aiInsights} />
+
+      <ReportSection title="Clinical Indication" accentColor="#0f766e" defaultOpen>
+        <p className="img-text">{ia.indication}</p>
+      </ReportSection>
+
+      <ReportSection title="Technique" accentColor="#6d28d9" defaultOpen={false}>
+        <p className="img-text">{ia.technique}</p>
+      </ReportSection>
+
+      <ReportSection title="Findings" accentColor="#1e40af" defaultOpen>
+        <FindingsList items={ia.findings} />
+      </ReportSection>
+
+      <ReportSection title="Impression" accentColor="#9a3412" defaultOpen>
+        <ImpressionList items={ia.impression} />
+      </ReportSection>
+    </div>
+  );
+}
+
 export function ImageAnalysisView({ doc }) {
   const ia = doc?.analysis?.imageAnalysis;
-  const aiInsights = doc?.analysis?.aiInsights;
   if (!ia) return null;
 
   return (
@@ -305,27 +341,7 @@ export function ImageAnalysisView({ doc }) {
       <div className="img-report__layout">
         {/* AI report first */}
         <div className="img-report__report-col">
-          <ReportHeader doc={doc} imageAnalysis={ia} />
-
-          <div className="img-report__sections">
-            <AiInsightsSection aiInsights={aiInsights} />
-
-            <ReportSection title="Clinical Indication" accentColor="#0f766e" defaultOpen>
-              <p className="img-text">{ia.indication}</p>
-            </ReportSection>
-
-            <ReportSection title="Technique" accentColor="#6d28d9" defaultOpen={false}>
-              <p className="img-text">{ia.technique}</p>
-            </ReportSection>
-
-            <ReportSection title="Findings" accentColor="#1e40af" defaultOpen>
-              <FindingsList items={ia.findings} />
-            </ReportSection>
-
-            <ReportSection title="Impression" accentColor="#9a3412" defaultOpen>
-              <ImpressionList items={ia.impression} />
-            </ReportSection>
-          </div>
+          <AnalysisReportBody analysisResponse={doc?.analysis} />
         </div>
 
         {/* Source image below the analysis */}
