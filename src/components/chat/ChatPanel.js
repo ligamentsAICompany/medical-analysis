@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { PiPaperclip } from 'react-icons/pi'
 import { isZipFile } from '../../lib/medicalFileTypes'
 import { listChatMessages, uploadChatFile } from '../../lib/chatClient'
+import { useAuth } from '../../context/AuthContext'
 import { ChatMessage } from './ChatMessage'
 
 const CHAT_MODEL_OPTIONS = [
@@ -14,6 +15,7 @@ let turnIdSeq = 1
 const nextTurnId = () => `chat-turn-${Date.now()}-${turnIdSeq++}`
 
 export function ChatPanel () {
+  const { user, loading: authLoading } = useAuth()
   const [turns, setTurns] = useState([])
   const [model, setModel] = useState(CHAT_MODEL_OPTIONS[0].value)
   const [isUploading, setIsUploading] = useState(false)
@@ -26,7 +28,15 @@ export function ChatPanel () {
   }, [turns])
 
   useEffect(() => {
+    if (authLoading) return undefined
+
+    if (!user?.uid) {
+      setIsLoadingHistory(false)
+      return undefined
+    }
+
     let active = true
+    setIsLoadingHistory(true)
 
     listChatMessages()
       .then((messages) => {
@@ -69,7 +79,7 @@ export function ChatPanel () {
     return () => {
       active = false
     }
-  }, [])
+  }, [authLoading, user?.uid])
 
   const handleFeedbackSubmitted = useCallback((messageId, feedback) => {
     setTurns((prev) =>
