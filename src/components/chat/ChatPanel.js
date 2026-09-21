@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { PiPaperclip } from 'react-icons/pi'
 import { isZipFile } from '../../lib/medicalFileTypes'
-import { uploadChatFile } from '../../lib/chatClient'
+import { listChatMessages, uploadChatFile } from '../../lib/chatClient'
 import { ChatMessage } from './ChatMessage'
 
 const CHAT_MODEL_OPTIONS = [
@@ -17,12 +17,59 @@ export function ChatPanel () {
   const [turns, setTurns] = useState([])
   const [model, setModel] = useState(CHAT_MODEL_OPTIONS[0].value)
   const [isUploading, setIsUploading] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const fileInputRef = useRef(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [turns])
+
+  useEffect(() => {
+    let active = true
+
+    listChatMessages()
+      .then((messages) => {
+        if (!active) return
+
+        // The API returns newest first. Chat reads naturally oldest first.
+        const historyTurns = [...messages].reverse().map((chatMessage) => ({
+          id: `saved-${chatMessage.messageId}`,
+          kind: 'assistant',
+          chatMessage,
+        }))
+
+        setTurns((currentTurns) => {
+          const currentMessageIds = new Set(
+            currentTurns.map((turn) => turn.chatMessage?.messageId).filter(Boolean)
+          )
+          return [
+            ...historyTurns.filter(
+              (turn) => !currentMessageIds.has(turn.chatMessage?.messageId)
+            ),
+            ...currentTurns,
+          ]
+        })
+      })
+      .catch((err) => {
+        if (!active) return
+        setTurns((currentTurns) => [
+          {
+            id: nextTurnId(),
+            kind: 'error',
+            text: err.message || 'Could not load saved MedGemma reports',
+          },
+          ...currentTurns,
+        ])
+      })
+      .finally(() => {
+        if (active) setIsLoadingHistory(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleFeedbackSubmitted = useCallback((messageId, feedback) => {
     setTurns((prev) =>
@@ -103,7 +150,9 @@ export function ChatPanel () {
       </header>
 
       <div className="assistant-panel__messages" role="log" aria-live="polite" aria-relevant="additions">
-        {turns.length === 0 ? (
+        {isLoadingHistory && turns.length === 0 ? (
+          <p className="assistant-msg__empty">Loading saved MedGemma reports…</p>
+        ) : turns.length === 0 ? (
           <p className="assistant-msg__empty">
             Upload a DICOM ZIP to get a chat-style analysis response, then rate it or correct
             the report — feedback is what makes a case eligible for the fine-tuning dataset.
