@@ -1,8 +1,12 @@
 import {
+  getChatMessagesGcsApiUrl,
   getChatFeedbackApiUrl,
   getChatMessagesApiUrl,
   getFreshApiAuthToken,
 } from '../config/analyzeApi'
+import { LARGE_FILE_THRESHOLD_BYTES } from '../config/uploadLimits'
+import { getSignedUploadUrl, uploadToGCS } from './analyzeClient'
+import { isZipFile } from './medicalFileTypes'
 
 /**
  * @param {Response} res
@@ -53,6 +57,31 @@ async function authHeaders () {
  * @returns {Promise<object>} ChatMessageResponse
  */
 export async function uploadChatFile (file, model = 'medgemma-dicom-v1', presentComplaint) {
+  if (isZipFile(file) && file.size >= LARGE_FILE_THRESHOLD_BYTES) {
+    const { upload_url: uploadUrl, gcs_path: gcsPath } = await getSignedUploadUrl()
+    await uploadToGCS(file, uploadUrl)
+    let res
+    try {
+      const headers = {
+        ...(await authHeaders()),
+        'Content-Type': 'application/json',
+      }
+      res = await fetch(getChatMessagesGcsApiUrl(), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          gcs_path: gcsPath,
+          model,
+          ...(presentComplaint ? { present_complaint: presentComplaint } : {}),
+        }),
+      })
+    } catch (err) {
+      console.error('uploadChatFile GCS analysis failed', err)
+      throw new Error('Could not reach chat analysis API')
+    }
+    return parseChatResponse(res, await res.text())
+  }
+
   const form = new FormData()
   form.append('file', file)
   form.append('model', model)

@@ -68,7 +68,7 @@ async function parseAnalyzeResponse (res, rawText) {
  * Request a GCS signed upload URL from the backend.
  * @returns {Promise<{ upload_url: string, gcs_path: string }>}
  */
-async function getSignedUploadUrl () {
+export async function getSignedUploadUrl () {
   const headers = { accept: 'application/json' };
   const pubKey = getAnalyzeApiPublicKey();
   if (pubKey) {
@@ -101,7 +101,7 @@ async function getSignedUploadUrl () {
  * @param {(percent: number) => void} [onProgress]
  * @returns {Promise<void>}
  */
-function uploadToGCS (file, uploadUrl, onProgress) {
+export function uploadToGCS (file, uploadUrl, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 

@@ -125,6 +125,11 @@ export function getChatMessagesApiUrl () {
   return `${getAnalyzeApiBaseUrl()}${CHAT_API_PATH}/messages`
 }
 
+/** Full URL for chat analysis after a large ZIP was uploaded directly to GCS. */
+export function getChatMessagesGcsApiUrl () {
+  return `${getAnalyzeApiBaseUrl()}${CHAT_API_PATH}/messages-gcs`
+}
+
 /**
  * Full URL for submitting feedback on a chat message.
  * @param {string} messageId
